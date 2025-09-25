@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/login.css">
+  <title>Sign Up</title>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="logo">
+        <img src="logo.png" alt="Vodafone Logo">
+      </div>
+      <h2>Create Account</h2>
+      <p class="subtitle">Fill your details to register</p>
+      <form>
+        <div class="input-group">
+          <input type="email" placeholder="Email" required />
+        </div>
+        <div class="input-group">
+          <input type="tel" placeholder="Phone Number" required />
+        </div>
+        <div class="input-group">
+          <select required>
+            <option value="" disabled selected>Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <input type="password" placeholder="Password" required />
+        </div>
+        <button type="submit">Sign Up</button>
+      </form>
+      <p class="forgot">Already have an account? <a href="login.html">Login here</a></p>
+    </div>
+  </div>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const body = document.body;
+    body.classList.add("fade");
+    setTimeout(() => body.classList.add("show"), 50);
+
+    // Links with smooth transition
+    document.querySelectorAll("a").forEach(link => {
+      if (link.hostname === window.location.hostname) {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          body.classList.remove("show");
+          setTimeout(() => {
+            window.location.href = link.href;
+          }, 500); // نفس وقت الـ transition
+        });
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
