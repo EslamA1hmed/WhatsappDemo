@@ -1,0 +1,57 @@
+<div class="template-list">
+  <button (click)="loadTemplates()">🔄 Load Templates</button>
+
+  <div *ngIf="loading" class="loading">Loading templates...</div>
+  <div *ngIf="errorMsg" class="error">{{ errorMsg }}</div>
+
+  <div class="template-grid">
+    <ng-container *ngFor="let template of templates">
+      <div class="template-card">
+        <div class="template-header">
+          <h3>{{ template.name || 'Unnamed template' }}</h3>
+          <span class="badge" [ngClass]="getStatusClass(template.status)">
+            {{ template.status || 'N/A' }}
+          </span>
+        </div>
+
+        <p class="meta">
+          🌐 {{ template.language || 'N/A' }}
+          &nbsp;|&nbsp;
+          📂 {{ template.category || 'N/A' }}
+        </p>
+
+        <!-- WhatsApp-like Preview -->
+        <div class="template-preview">
+          <div class="chat-window">
+            <div *ngFor="let comp of template.components || []">
+              <!-- HEADER -->
+              <div *ngIf="comp.type === 'HEADER'" class="msg-bubble header">
+                {{ getComponentContent(comp) }}
+              </div>
+
+              <!-- BODY -->
+              <div *ngIf="comp.type === 'BODY'" class="msg-bubble body">
+                {{ getComponentContent(comp) }}
+              </div>
+
+              <!-- Example body texts -->
+              <div *ngIf="comp.example && getExampleBodyTexts(comp.example)?.length">
+                <div *ngFor="let bodyRow of getExampleBodyTexts(comp.example)" class="msg-bubble example">
+                  {{ formatBodyRow(bodyRow) }}
+                </div>
+              </div>
+
+              <!-- BUTTONS -->
+              <div *ngIf="comp.buttons?.length" class="msg-buttons">
+                <button *ngFor="let btn of comp.buttons" class="wa-button">
+                  {{ btn.text || 'Button' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </ng-container>
+  </div>
+</div>

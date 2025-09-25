@@ -1,0 +1,199 @@
+<div class="send-message-layout">
+  <div class="form-section">
+    <div class="send-message-container">
+      <div class="chat-header">
+        <img src="assets/whatsapp-logo.jpg" alt="WhatsApp Logo" class="logo">
+        <h2>Send WhatsApp Message</h2>
+      </div>
+
+      <!-- Success/Error Messages -->
+      <div *ngIf="successMsg" class="alert alert-success">{{ successMsg }}</div>
+      <div *ngIf="errorMsg" class="alert alert-error">{{ errorMsg }}</div>
+
+      <form (ngSubmit)="onSend()" #messageForm="ngForm">
+        <div class="form-group">
+          <label>Recipient Number</label>
+          <input type="text" placeholder="e.g., +201234567890" [(ngModel)]="to" name="to" required />
+        </div>
+
+        <div class="form-group">
+          <label>Message Type</label>
+          <select [(ngModel)]="type" name="type" (change)="onTypeChange($event)" required>
+            <option value="" disabled>Select Message Type</option>
+            <option value="text">📝 Text</option>
+            <option value="image">🖼️ Image</option>
+            <option value="video">🎥 Video</option>
+            <option value="document">📄 Document</option>
+            <option value="template">📋 Template</option>
+          </select>
+        </div>
+
+        <!-- Template -->
+        <div *ngIf="type === 'template'" class="form-group">
+          <label>Template Name</label>
+          <select [(ngModel)]="selectedTemplateName" name="templateName" (change)="onTemplateChange($event)" required>
+            <option value="" disabled>Select a Template</option>
+            <option *ngFor="let name of templateNames" [value]="name">{{ name }}</option>
+          </select>
+        </div>
+
+        <!-- Template Dynamic Fields -->
+        <ng-container *ngIf="type === 'template' && selectedTemplate">
+          <!-- Header Variables -->
+          <div *ngIf="hasHeaderVariables()" class="form-group">
+            <label>Header Variables</label>
+            <div *ngFor="let variable of getHeaderVariables(); let i = index" class="form-group">
+              <label>Variable {{ i + 1 }}</label>
+              <input type="text" [placeholder]="'Enter value for variable ' + (i + 1)" 
+                     [(ngModel)]="templateHeaderVariables[i]" [name]="'templateHeaderVariable' + i" required />
+            </div>
+          </div>
+          <div *ngIf="hasHeaderMedia()" class="form-group">
+            <label>Header Media Link ({{ headerFormat }})</label>
+            <input type="text" placeholder="e.g., https://example.com/media" [(ngModel)]="templateHeaderMedia" name="templateHeaderMedia" required />
+          </div>
+
+          <!-- Body Variables -->
+          <div *ngFor="let variable of getBodyVariables(); let i = index" class="form-group">
+            <label>Body Variable {{ i + 1 }}</label>
+            <input type="text" [placeholder]="'Enter value for variable ' + (i + 1)" 
+                   [(ngModel)]="templateBodyVariables[i]" [name]="'templateBodyVariable' + i" required />
+          </div>
+
+          <!-- Buttons -->
+          <div *ngFor="let button of getDynamicButtons(); let i = index" class="form-group">
+            <ng-container *ngIf="button.type === 'URL' || button.type === 'PHONE_NUMBER'">
+              <label>{{ button.type === 'URL' ? 'URL Parameter' : 'Phone Number' }} for "{{ button.text }}"</label>
+              <input type="text" [placeholder]="button.type === 'URL' ? 'Enter URL' : 'Enter phone number'" 
+                     [(ngModel)]="templateButtonValues[i]" [name]="'templateButtonValue' + i" required />
+            </ng-container>
+          </div>
+        </ng-container>
+
+        <!-- Text -->
+        <div *ngIf="type === 'text'" class="form-group">
+          <label>Message Body</label>
+          <textarea placeholder="Enter your message" [(ngModel)]="textBody" name="textBody" rows="4" required></textarea>
+        </div>
+
+        <!-- Image -->
+        <div *ngIf="type === 'image'" class="form-group">
+          <label>Image Link</label>
+          <input type="text" placeholder="e.g., https://example.com/image.jpg" [(ngModel)]="imageLink" name="imageLink" required />
+          <label>Caption (optional)</label>
+          <input type="text" placeholder="Enter caption" [(ngModel)]="imageCaption" name="imageCaption" />
+        </div>
+
+        <!-- Video -->
+        <div *ngIf="type === 'video'" class="form-group">
+          <label>Video Link</label>
+          <input type="text" placeholder="e.g., https://example.com/video.mp4" [(ngModel)]="videoLink" name="videoLink" required />
+          <label>Caption (optional)</label>
+          <input type="text" placeholder="Enter caption" [(ngModel)]="videoCaption" name="videoCaption" />
+        </div>
+
+        <!-- Document -->
+        <div *ngIf="type === 'document'" class="form-group">
+          <label>Document Link</label>
+          <input type="text" placeholder="e.g., https://example.com/document.pdf" [(ngModel)]="docLink" name="docLink" required />
+          <label>Filename (optional)</label>
+          <input type="text" placeholder="e.g., Document.pdf" [(ngModel)]="docFilename" name="docFilename" />
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="!messageForm.valid">
+          🚀 Send Message
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Preview Section -->
+  <div class="preview-section">
+    <div class="whatsapp-preview">
+      <div class="whatsapp-header">
+        <div class="contact-info">
+          <div class="avatar"></div>
+          <div class="contact-details">
+            <h4>Recipient Preview</h4>
+            <span>{{ to || 'Enter number to preview' }}</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="header-dots">⋮</div>
+        </div>
+      </div>
+      <div class="chat-area">
+        <div class="message-bubble" [ngClass]="{'rtl': isPreviewRTL()}" *ngIf="hasPreviewContent()">
+          <!-- Template Preview -->
+          <ng-container *ngIf="type === 'template' && selectedTemplate">
+            <div *ngIf="hasHeaderVariables()" class="message-header">
+              {{ formatHeaderText() }}
+            </div>
+            <div *ngIf="hasHeaderMedia()" class="media-preview">
+              <ng-container [ngSwitch]="headerFormat">
+                <img *ngSwitchCase="'IMAGE'" [src]="templateHeaderMedia" alt="Header Image Preview" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <video *ngSwitchCase="'VIDEO'" [src]="templateHeaderMedia" controls 
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                </video>
+                <div *ngSwitchCase="'DOCUMENT'" class="document-icon">📄</div>
+                <div class="media-placeholder" style="display: none;">
+                  {{ headerFormat }} Preview ({{ templateHeaderMedia || 'No link provided' }})
+                </div>
+              </ng-container>
+            </div>
+            <div class="message-body">
+              <div *ngFor="let line of formatBodyText().split('\n')" class="body-line">
+                {{ line }}
+              </div>
+            </div>
+            <div *ngIf="getFooterText()" class="message-footer">
+              {{ getFooterText() }}
+            </div>
+            <div *ngIf="getDynamicButtons().length" class="message-buttons">
+              <div *ngFor="let button of getDynamicButtons(); let i = index" class="button-preview" [ngClass]="{'rtl-button': isPreviewRTL()}">
+                {{ button.text }} {{ button.type !== 'QUICK_REPLY' && templateButtonValues[i] ? '(' + templateButtonValues[i] + ')' : '' }}
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Text Preview -->
+          <div *ngIf="type === 'text'" class="message-body">
+            <div *ngFor="let line of (textBody || 'Your text will appear here...').split('\n')" class="body-line">{{ line }}</div>
+          </div>
+
+          <!-- Image Preview -->
+          <div *ngIf="type === 'image'" class="media-preview">
+            <img *ngIf="imageLink" [src]="imageLink" alt="Image Preview" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div class="media-placeholder" style="display: none;">🖼️ Image Preview ({{ imageLink || 'No link provided' }})</div>
+            <div *ngIf="imageCaption" class="caption">{{ imageCaption }}</div>
+          </div>
+
+          <!-- Video Preview -->
+          <div *ngIf="type === 'video'" class="media-preview">
+            <video *ngIf="videoLink" [src]="videoLink" controls 
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            </video>
+            <div class="media-placeholder" style="display: none;">🎥 Video Preview ({{ videoLink || 'No link provided' }})</div>
+            <div *ngIf="videoCaption" class="caption">{{ videoCaption }}</div>
+          </div>
+
+          <!-- Document Preview -->
+          <div *ngIf="type === 'document'" class="media-preview">
+            <div class="document-icon">📄</div>
+            <span>{{ docFilename || 'Document.pdf' }}</span>
+            <div *ngIf="docLink" class="caption">{{ getMediaFileName(docLink) }}</div>
+          </div>
+
+          <div class="message-time">{{ getCurrentTime() }} ✓✓</div>
+        </div>
+        <div class="no-preview" *ngIf="!hasPreviewContent()">
+          <div class="no-preview-icon">💬</div>
+          <p>Start typing to see preview</p>
+          <small>Fill in the message details and watch the magic happen!</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,41 @@
+<div class="overlay"></div>
+
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="logo">
+      <img src="assets/logo.png" alt="Vodafone WhatsApp Demo Logo">
+    </div>
+    <h2>Create Account</h2>
+    <p class="subtitle">Fill your details to register</p>
+
+    <!-- رسائل خطأ / نجاح -->
+    <p *ngIf="errorMsg" class="forgot" style="color:#ff4d4d">{{ errorMsg }}</p>
+    <p *ngIf="successMsg" class="forgot" style="color:#4fff4d">{{ successMsg }}</p>
+
+    <form (ngSubmit)="onSignup()">
+      <div class="input-group">
+        <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required />
+      </div>
+      <div class="input-group">
+        <input type="tel" placeholder="Phone Number" [(ngModel)]="phoneNumber" name="phoneNumber" required />
+      </div>
+      <div class="input-group">
+        <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required />
+      </div>
+       <div class="input-group" id="select-gender">
+        <select [(ngModel)]="gender" name="gender" required>
+          <option value="" disabled>Select Gender</option>
+          <option value="MALE">MALE</option>
+          <option value="FEMALE">FEMALE</option>
+          <option value="OTHER">OTHER</option>
+        </select>
+      </div>
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <p class="forgot">
+      Already have an account? 
+      <a [routerLink]="['/login']">Login</a>
+    </p>
+  </div>
+</div>

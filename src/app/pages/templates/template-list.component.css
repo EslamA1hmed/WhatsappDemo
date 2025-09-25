@@ -1,0 +1,145 @@
+.template-list {
+  padding: 16px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* ✅ شبكة للكروت */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 20px;
+}
+
+/* زرار التحميل */
+.template-list button {
+  padding: 8px 16px;
+  background-color: #009688; /* ✅ أخضر مزرق مميز */
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+.template-list button:hover {
+  background-color: #00796b;
+}
+
+.loading {
+  font-style: italic;
+  margin: 10px 0;
+}
+
+.template-card {
+  background-color: #f9f9f9;
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  border: 3px solid #25d366;
+  display: flex;
+  flex-direction: column;
+}
+
+.template-header {
+  display: flex;
+  flex-wrap: wrap; 
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.template-header h3 {
+  margin: 0;
+  font-size: 17px;
+  color: #075e54;
+  flex: 1 1 auto;
+  word-break: break-word;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge.approved {
+  background-color: #2e7d32; /* ✅ أخضر أوضح */
+}
+.badge.rejected {
+  background-color: #e53935; /* ✅ أحمر تحذيري */
+}
+.badge.pending {
+  background-color: #fb8c00; /* ✅ برتقالي */
+  color: white;
+}
+
+.meta {
+  font-size: 13px;
+  color: #666;
+  margin: 2px 0 10px 0;
+}
+
+.template-preview {
+  margin-top: 10px;
+}
+
+.chat-window {
+  background: #ece5dd;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.msg-bubble {
+  background: #ffffff;
+  border-radius: 8px 8px 0 8px;
+  padding: 8px 12px;
+  margin: 6px 0;
+  max-width: 80%;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #111;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.msg-bubble.header {
+  font-weight: bold;
+  color: #075e54;
+}
+.msg-bubble.body {
+  background: #dcf8c6;
+}
+.msg-bubble.example {
+  background: #fff;
+  font-style: italic;
+  color: #555;
+}
+
+.msg-buttons {
+  margin-top: 8px;
+}
+.wa-button {
+  display: inline-block;
+  background: #e3f2fd; /* ✅ أزرق فاتح */
+  border: 1px solid #1565c0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin: 2px 4px 0 0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #1565c0;
+}
+.wa-button:hover {
+  background: #bbdefb;
+}
+
+.error {
+  color: #c0392b;
+  margin-top: 10px;
+}

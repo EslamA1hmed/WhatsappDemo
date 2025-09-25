@@ -1,0 +1,205 @@
+/* Wrapper */
+.dashboard-wrapper {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background: linear-gradient(180deg, #075e54, #128c7e);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-shadow: 3px 0 20px rgba(0,0,0,0.25);
+  border-radius: 0 20px 20px 0;
+  position: relative;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.sidebar-logo img {
+  width: 60px;
+}
+
+.sidebar h2 {
+  margin-bottom: 30px;
+  font-size: 22px;
+  text-align: center;
+  color: #fff;
+  letter-spacing: 1px;
+  animation: fadeInDown 3s ease;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sidebar ul li {
+  padding: 12px 18px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #fff;
+}
+
+.sidebar ul li.active,
+.sidebar ul li:hover {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+  transform: translateX(4px);
+}
+
+.sidebar ul li.logout-btn {
+  margin-top: auto;
+  background: #fff;
+  color: #075e54;
+  font-weight: bold;
+  text-align: center;
+}
+
+.sidebar ul li.logout-btn:hover {
+  background: #f1f1f1;
+  color: #25d366;
+}
+
+/* Content */
+.content {
+  flex: 1;
+  position: relative;
+  background-image: url('/assets/whatsappbackground.jpg');
+  background-repeat: repeat;
+  background-size: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Tab Content */
+.tab-content {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Dashboard Tab */
+.dashboard-tab .dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  padding: 20px;
+}
+
+/* Send Message Tab */
+.send-message-tab {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+}
+
+/* Template List Tab */
+.template-list-tab {
+  padding: 20px;
+}
+
+.template-list-tab app-template-list {
+  width: 100%;
+  display: block;
+}
+
+/* Create Template Tab */
+.create-template-tab {
+  padding: 20px;
+  height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.create-template-tab app-create-template {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Card placeholders */
+.card-placeholder {
+  background: #fff;
+  border-radius: 20px;
+  padding: 25px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: #444;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-placeholder:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+/* Animations */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .dashboard-tab .dashboard-cards {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-wrapper {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    border-radius: 0 0 20px 20px;
+  }
+  
+  .sidebar ul {
+    flex-direction: row;
+    justify-content: space-around;
+    flex-wrap: wrap;
+  }
+  
+  .sidebar ul li {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    margin: 5px;
+  }
+  
+  .tab-content {
+    padding: 15px;
+  }
+  
+  .create-template-tab {
+    height: auto;
+  }
+}

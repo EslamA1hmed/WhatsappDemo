@@ -1,0 +1,32 @@
+<div class="overlay"></div>
+
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="logo">
+      <img src="assets/logo.png" alt="Vodafone WhatsApp Demo Logo">
+    </div>
+    <h2>Login to Vodafone WhatsApp Demo</h2>
+    <p class="subtitle">Use your credentials to continue</p>
+
+    <form (ngSubmit)="onLogin()" #loginForm="ngForm" novalidate>
+      <div class="input-group">
+        <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required #emailRef="ngModel" />
+        <div *ngIf="emailRef.invalid && emailRef.touched" class="field-error">Enter a valid email</div>
+      </div>
+
+      <div class="input-group">
+        <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required #passwordRef="ngModel" />
+        <div *ngIf="passwordRef.invalid && passwordRef.touched" class="field-error">Enter your password</div>
+      </div>
+
+      <button type="submit" [disabled]="loginForm.invalid">Sign In</button>
+    </form>
+
+    <p class="forgot" *ngIf="errorMsg">{{ errorMsg }}</p>
+
+    <p class="signup">
+      Don't have an account?
+      <a [routerLink]="['/signup']">Sign Up</a>
+    </p>
+  </div>
+</div>
