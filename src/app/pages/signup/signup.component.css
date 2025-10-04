@@ -65,6 +65,10 @@ body {
   text-align: center;
   animation: fadeInUp 0.9s ease;
   backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 600px; /* إضافة ارتفاع أدنى لضمان مكان النص */
 }
 
 /* Logo */
@@ -225,6 +229,30 @@ button:hover {
   color: #fff;
 }
 
+/* Powered by */
+.powered-by {
+  margin-top: auto; /* يدفع النص للأسفل داخل الكارد */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px; /* زيادة المسافة بين اللوجو والنص */
+  text-align: center;
+  font-size: 14px; /* زيادة الحجم للوضوح */
+  color: #fff;
+  font-weight: 500; /* جعله أكثر وضوحاً */
+  padding-bottom: 10px; /* مسافة من أسفل الكارد */
+}
+
+.edafa-logo {
+  width: 30px; /* زيادة الحجم للوضوح */
+  height: 30px;
+  object-fit: contain;
+}
+
+.powered-by span {
+  line-height: 1.2;
+}
+
 /* Animation */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px);}
@@ -236,5 +264,16 @@ button:hover {
   .login-card {
     width: 90%;
     padding: 40px 25px;
+    min-height: 550px; /* تعديل الارتفاع الأدنى للشاشات الصغيرة */
+  }
+
+  .powered-by {
+    font-size: 13px; /* تقليل الحجم قليلاً على الشاشات الصغيرة */
+    padding-bottom: 8px;
+  }
+
+  .edafa-logo {
+    width: 25px; /* تقليل الحجم قليلاً على الشاشات الصغيرة */
+    height: 25px;
   }
 }

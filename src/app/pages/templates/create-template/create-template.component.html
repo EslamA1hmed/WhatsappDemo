@@ -7,8 +7,10 @@
         <div class="form-group">
           <label>Template Name</label>
           <input type="text" [(ngModel)]="template.name" name="name" required 
-                 placeholder="Enter template name" />
+                 placeholder="Enter template name (lowercase, underscores only)" 
+                 pattern="[a-z0-9_]+" title="Only lowercase letters, numbers, and underscores allowed"/>
         </div>
+        
         <div class="form-group">
           <label>Category</label>
           <select [(ngModel)]="template.category" name="category" (ngModelChange)="onCategoryChange()">
@@ -17,32 +19,21 @@
             <option value="AUTHENTICATION">Authentication</option>
           </select>
         </div>
+
         <div class="form-group">
           <label>Language</label>
           <select [(ngModel)]="template.language" name="language" required>
-            <option value="ar">Arabic (ar)</option>
-            <option value="en">English (en)</option>
-            <option value="en_US">English - United States (en_US)</option>
-            <option value="es">Spanish (es)</option>
-            <option value="fr">French (fr)</option>
-            <option value="de">German (de)</option>
-            <option value="pt_BR">Portuguese - Brazil (pt_BR)</option>
-            <option value="pt_PT">Portuguese - Portugal (pt_PT)</option>
-            <option value="hi">Hindi (hi)</option>
-            <option value="zh_CN">Chinese - Simplified (zh_CN)</option>
-            <option value="zh_TW">Chinese - Traditional (zh_TW)</option>
-            <option value="it">Italian (it)</option>
-            <option value="ja">Japanese (ja)</option>
-            <option value="ru">Russian (ru)</option>
-            <option value="ko">Korean (ko)</option>
-            <option value="id">Indonesian (id)</option>
-            <option value="tr">Turkish (tr)</option>
-            <option value="ms">Malay (ms)</option>
-            <option value="th">Thai (th)</option>
-            <option value="vi">Vietnamese (vi)</option>
+            <option value="en_US">English - United States</option>
+            <option value="ar">Arabic</option>
+            <option value="en_GB">English - UK</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="pt_BR">Portuguese - Brazil</option>
           </select>
         </div>
-        <!-- ---------- HEADER (Hidden for AUTHENTICATION) ---------- -->
+
+        <!-- HEADER Section (Hidden for AUTHENTICATION) -->
         <section class="component-section" *ngIf="template.category !== 'AUTHENTICATION'">
           <h3>📋 Header (optional)</h3>
           <div *ngIf="template.components && template.components[0] as headerComp">
@@ -55,207 +46,231 @@
                 <option value="DOCUMENT">📄 Document</option>
               </select>
             </div>
+
             <!-- Text Header -->
             <div *ngIf="headerComp.format === 'TEXT'" class="form-group">
               <textarea #headerText [(ngModel)]="headerComp.text" name="headerText"
-                        placeholder="Enter header text (you can insert variables like {{1}})"
-                        rows="3" (keydown)="onHeaderKeydown($event)" (ngModelChange)="onHeaderTextChange($event)"></textarea>
+                        placeholder="Enter header text (max 60 chars, you can insert one variable like {{1}})"
+                        rows="2" maxlength="60" 
+                        (keydown)="onHeaderKeydown($event)" 
+                        (ngModelChange)="onHeaderTextChange($event)"></textarea>
+              <small class="char-count">{{headerComp.text?.length || 0}}/60 characters</small>
             </div>
+
             <!-- Media Header -->
-            <div *ngIf="headerComp.format !== 'TEXT'">
-              <div class="checkbox-group">
-                <input type="checkbox" [(ngModel)]="headerComp.useVariable" name="headerUseVariable" 
-                       id="headerUseVariable" (ngModelChange)="onUseVariableChange('HEADER')" />
-                <label for="headerUseVariable">Use Variable for Media URL (e.g., dynamic image/video/document)</label>
-              </div>
-              <div *ngIf="headerComp.useVariable" class="note-text">
-                Media headers support <strong>one variable only</strong> ({{1}}). Provide an example URL below for approval.
-              </div>
+            <div *ngIf="headerComp.format !== 'TEXT' && headerComp.format" class="form-group">
+              <label>Media File</label>
+              <input type="file" (change)="onMediaFileChange($event)" [accept]="getAcceptType(headerComp.format)" />
             </div>
-            <!-- Variables for Header (Text or Media Variable) -->
-            <div *ngIf="headerComp.format === 'TEXT' || headerComp.useVariable" class="vars-block">
-              <button type="button" class="btn-variable" (click)="addVariable('HEADER')">
+
+            <!-- Variables for Header (Text Only) -->
+            <div *ngIf="headerComp.format === 'TEXT'" class="vars-block">
+              <button type="button" class="btn-variable" (click)="addVariable('HEADER')"
+                      *ngIf="headerComp.variables!.length === 0">
                 ➕ Add Variable
               </button>
+              
               <div *ngFor="let v of headerComp.variables; let i = index" class="var-row">
                 <label class="var-label">{{ v.placeholder }}</label>
                 <input [(ngModel)]="v.example" [name]="'headerVar' + i"
-                       placeholder="Example for {{ v.placeholder }} (e.g., https://example.com/image.jpg for media)" />
-                <button type="button" class="btn-remove" (click)="removeVariable('HEADER', i)">
+                       placeholder="Example for {{ v.placeholder }}"
+                       required />
+                <button type="button" class="btn-remove" (click)="removeVariable('HEADER', i)" title="Remove variable">
                   ❌
                 </button>
-              </div>
-              <div *ngIf="headerComp.useVariable && headerComp.variables?.length === 0" class="note-text">
-                No variables added. Click "Add Variable" to create {{1}} for the media URL.
               </div>
             </div>
           </div>
         </section>
-        <!-- ---------- BODY ---------- -->
+
+        <!-- BODY Section -->
         <section class="component-section">
-          <h3>📄 Body *</h3>
+          <h3>📄 Body * (required)</h3>
           <div *ngIf="template.components && template.components[1] as bodyComp">
-            <div class="form-group">
+            <!-- Non-Authentication Body -->
+            <div *ngIf="template.category !== 'AUTHENTICATION'" class="form-group">
               <textarea #bodyText [(ngModel)]="bodyComp.text" name="bodyText" 
-                        placeholder="Enter body text (use {{1}} for OTP in Authentication templates)"
-                        rows="4" required (keydown)="onBodyKeydown($event)" (ngModelChange)="onBodyTextChange($event)"></textarea>
+                        placeholder="Enter body text (max 1024 chars, use {{1}} for variables)"
+                        rows="4" maxlength="1024" required 
+                        (keydown)="onBodyKeydown($event)" 
+                        (ngModelChange)="onBodyTextChange($event)"></textarea>
+              <small class="char-count">{{bodyComp.text?.length || 0}}/1024 characters</small>
             </div>
-            <div class="vars-block">
+            <!-- Authentication Body -->
+            <div *ngIf="template.category === 'AUTHENTICATION'" class="note-text">
+              🔐 Authentication templates use a fixed body text: "{{1}} is your verification code".
+            </div>
+
+            <div class="vars-block" *ngIf="template.category !== 'AUTHENTICATION'">
               <button type="button" class="btn-variable" (click)="addVariable('BODY')">
                 ➕ Add Variable
               </button>
+              
               <div *ngFor="let v of bodyComp.variables; let i = index" class="var-row">
                 <label class="var-label">{{ v.placeholder }}</label>
                 <input [(ngModel)]="v.example" [name]="'bodyVar' + i" 
-                       placeholder="Example for {{ v.placeholder }} (e.g., 123456 for OTP)" />
-                <button type="button" class="btn-remove" (click)="removeVariable('BODY', i)">
+                       placeholder="Example for {{ v.placeholder }} (e.g., 123456 for OTP)" 
+                       required />
+                <button type="button" class="btn-remove" (click)="removeVariable('BODY', i)" title="Remove variable">
                   ❌
                 </button>
               </div>
-              <div *ngIf="template.category === 'AUTHENTICATION' && bodyComp.variables?.length === 0" class="note-text">
-                Authentication templates require at least one variable ({{1}}) for the OTP.
+            </div>
+
+            <!-- AUTHENTICATION Specific Fields -->
+            <div *ngIf="template.category === 'AUTHENTICATION'" class="vars-block">
+              <div class="checkbox-group">
+                <input type="checkbox" [(ngModel)]="bodyComp.add_security_recommendation" 
+                       name="securityRecommendation" id="securityRecommendation" />
+                <label for="securityRecommendation">Add Security Recommendation</label>
               </div>
             </div>
           </div>
         </section>
-        <!-- ---------- FOOTER ---------- -->
+
+        <!-- FOOTER Section -->
         <section class="component-section">
           <h3>🔗 Footer (optional)</h3>
           <div *ngIf="template.components && template.components[2] as footerComp">
-            <div class="form-group">
+            <div class="form-group" *ngIf="template.category !== 'AUTHENTICATION'">
               <textarea [(ngModel)]="footerComp.text" name="footerText" 
-                        placeholder="Enter footer text (e.g., 'This code expires in 10 minutes')"
-                        rows="2"></textarea>
+                        placeholder="Enter footer text (max 60 chars)"
+                        rows="2" maxlength="60"></textarea>
+              <small class="char-count">{{footerComp.text?.length || 0}}/60 characters</small>
+            </div>
+            <div *ngIf="template.category === 'AUTHENTICATION'" class="form-group">
+              <label>Code Expiration (minutes)</label>
+              <input type="number" [(ngModel)]="footerComp.code_expiration_minutes" 
+                     name="codeExpiration" min="1" max="1440"
+                     placeholder="e.g., 10" />
             </div>
           </div>
         </section>
-        <!-- ---------- BUTTONS ---------- -->
+
+        <!-- BUTTONS Section -->
         <section class="component-section">
           <h3>🔘 Buttons (optional)</h3>
           <div *ngIf="template.components && template.components[3] as buttonsComp">
             <div class="vars-block">
-              <button type="button" class="btn-add-button" (click)="addButton()" [disabled]="buttonsComp.buttons && buttonsComp.buttons.length >= 4">
-                ➕ Add Button
+              <button type="button" class="btn-add-button" (click)="addButton()" 
+                      [disabled]="buttonsComp.buttons && buttonsComp.buttons.length >= (template.category === 'AUTHENTICATION' ? 1 : 10)">
+                ➕ Add Button (Max: {{ template.category === 'AUTHENTICATION' ? 1 : 10 }})
               </button>
+              
               <div *ngFor="let btn of buttonsComp.buttons; let i = index" class="button-row">
                 <select class="button-type-select" [(ngModel)]="btn.type" [name]="'buttonType' + i" 
                         (ngModelChange)="onButtonTypeChange(i)">
-                  <option value="COPY_CODE" *ngIf="template.category === 'AUTHENTICATION'">Copy Code</option>
+                  <option value="OTP" *ngIf="template.category === 'AUTHENTICATION'">OTP</option>
                   <option value="QUICK_REPLY" *ngIf="template.category !== 'AUTHENTICATION'">Quick Reply</option>
                   <option value="URL" *ngIf="template.category !== 'AUTHENTICATION'">URL</option>
                   <option value="PHONE_NUMBER" *ngIf="template.category !== 'AUTHENTICATION'">Phone Number</option>
                 </select>
-                <!-- Quick Reply -->
+
+                <!-- Quick Reply Button -->
                 <div *ngIf="btn.type === 'QUICK_REPLY'" class="form-group">
                   <label>Button Text</label>
                   <input [(ngModel)]="btn.text" [name]="'buttonText' + i"
-                         placeholder="Button Text (e.g., {{1}} for variable or 'Yes')" required />
-                  <button type="button" class="btn-variable" (click)="addButtonVariable(i, 'text')">
-                    ➕ Add Text Variable
-                  </button>
-                  <div *ngFor="let v of btn.variables; let vi = index" class="var-row">
-                    <label class="var-label">{{ v.placeholder }}</label>
-                    <input [(ngModel)]="v.example" [name]="'buttonTextVar' + i + '_' + vi"
-                           placeholder="Example for {{ v.placeholder }} (e.g., Yes)" required />
-                    <button type="button" class="btn-remove" (click)="removeButtonVariable(i, vi)">
-                      ❌
-                    </button>
-                  </div>
+                         placeholder="Button text (e.g., Yes, No, Maybe)" 
+                         maxlength="25" required />
+                  <small class="char-count">{{btn.text?.length || 0}}/25 characters</small>
                 </div>
-                <!-- URL -->
+
+                <!-- URL Button -->
                 <div *ngIf="btn.type === 'URL'" class="form-group">
                   <label>Button Text</label>
                   <input [(ngModel)]="btn.text" [name]="'buttonText' + i"
-                         placeholder="Button Text (e.g., {{1}} for variable or 'Visit Website')" required />
-                  <button type="button" class="btn-variable" (click)="addButtonVariable(i, 'text')">
-                    ➕ Add Text Variable
-                  </button>
-                  <div *ngFor="let v of btn.variables | buttonTextVariables; let vi = index" class="var-row">
-                    <label class="var-label">{{ v.placeholder }}</label>
-                    <input [(ngModel)]="v.example" [name]="'buttonTextVar' + i + '_' + vi"
-                           placeholder="Example for {{ v.placeholder }} (e.g., Visit Now)" required />
-                    <button type="button" class="btn-remove" (click)="removeButtonVariable(i, vi)">
-                      ❌
-                    </button>
-                  </div>
+                         placeholder="Button text (e.g., Visit Website)" 
+                         maxlength="25" required />
+                  <small class="char-count">{{btn.text?.length || 0}}/25 characters</small>
+                  
                   <label>URL</label>
                   <input [(ngModel)]="btn.url" [name]="'buttonUrl' + i"
-                         placeholder="URL (e.g., https://example.com/{{2}})" 
-                         (ngModelChange)="updateUrlVariable(i)" required />
-                  <button type="button" class="btn-variable" (click)="addButtonVariable(i, 'url')">
-                    ➕ Add URL Variable
-                  </button>
-                  <div *ngFor="let v of btn.variables | buttonUrlVariables; let vi = index" class="var-row">
-                    <label class="var-label">{{ v.placeholder }}</label>
-                    <input [(ngModel)]="v.example" [name]="'buttonUrlVar' + i + '_' + vi"
-                           placeholder="Example for {{ v.placeholder }} (e.g., https://example.com/product)" required />
-                    <button type="button" class="btn-remove" (click)="removeButtonVariable(i, vi)">
-                      ❌
+                         placeholder="https://example.com/{{1}}" 
+                         type="url" required />
+                  <div class="vars-block">
+                    <button type="button" class="btn-variable" (click)="addButtonVariable(i)"
+                            *ngIf="getButtonVariables(btn).length === 0">
+                      ➕ Add URL Variable
                     </button>
+                    <div *ngFor="let v of getButtonVariables(btn); let vi = index" class="var-row">
+                      <label class="var-label">{{ v.placeholder }}</label>
+                      <input [(ngModel)]="v.example" [name]="'buttonUrlVar' + i + vi"
+                             placeholder="Example for {{ v.placeholder }} (e.g., summer2023)"
+                             required />
+                      <button type="button" class="btn-remove" (click)="removeButtonVariable(i, vi)" title="Remove variable">
+                        ❌
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <!-- Phone Number -->
+
+                <!-- Phone Number Button -->
                 <div *ngIf="btn.type === 'PHONE_NUMBER'" class="form-group">
                   <label>Button Text</label>
                   <input [(ngModel)]="btn.text" [name]="'buttonText' + i"
-                         placeholder="Button Text (e.g., {{1}} for variable or 'Call Us')" required />
-                  <button type="button" class="btn-variable" (click)="addButtonVariable(i, 'text')">
-                    ➕ Add Text Variable
-                  </button>
-                  <div *ngFor="let v of btn.variables | buttonTextVariables; let vi = index" class="var-row">
-                    <label class="var-label">{{ v.placeholder }}</label>
-                    <input [(ngModel)]="v.example" [name]="'buttonTextVar' + i + '_' + vi"
-                           placeholder="Example for {{ v.placeholder }} (e.g., Call Support)" required />
-                    <button type="button" class="btn-remove" (click)="removeButtonVariable(i, vi)">
-                      ❌
-                    </button>
-                  </div>
+                         placeholder="Button text (e.g., Call Us)" 
+                         maxlength="25" required />
+                  <small class="char-count">{{btn.text?.length || 0}}/25 characters</small>
+                  
                   <label>Phone Number</label>
                   <input [(ngModel)]="btn.phone_number" [name]="'buttonPhone' + i"
-                         placeholder="Phone Number (e.g., {{2}} or +1234567890)" required />
-                  <button type="button" class="btn-variable" (click)="addButtonVariable(i, 'phone_number')">
-                    ➕ Add Phone Number Variable
-                  </button>
-                  <div *ngFor="let v of btn.variables | buttonPhoneVariables; let vi = index" class="var-row">
-                    <label class="var-label">{{ v.placeholder }}</label>
-                    <input [(ngModel)]="v.example" [name]="'buttonPhoneVar' + i + '_' + vi"
-                           placeholder="Example for {{ v.placeholder }} (e.g., +1234567890)" required />
-                    <button type="button" class="btn-remove" (click)="removeButtonVariable(i, vi)">
-                      ❌
-                    </button>
+                         placeholder="+1234567890" 
+                         pattern="^\+[1-9]\d{1,14}$" required />
+                </div>
+
+                <!-- OTP Button -->
+                <div *ngIf="btn.type === 'OTP'" class="form-group">
+                  <label>OTP Type</label>
+                  <select [(ngModel)]="btn.otp_type" [name]="'otpType' + i">
+                    <option value="COPY_CODE">Copy Code</option>
+                    <option value="ONE_TAP">One-Tap</option>
+                  </select>
+                  <div *ngIf="btn.otp_type === 'ONE_TAP'" class="form-group">
+                    <label>Autofill Text</label>
+                    <input [(ngModel)]="btn.autofill_text" [name]="'autofillText' + i"
+                           placeholder="Autofill" />
+                    
+                    <label>Package Name (Android)</label>
+                    <input [(ngModel)]="btn.package_name" [name]="'packageName' + i"
+                           placeholder="com.example.app" />
+                    
+                    <label>Signature Hash</label>
+                    <input [(ngModel)]="btn.signature_hash" [name]="'signatureHash' + i"
+                           placeholder="App signature hash" />
                   </div>
                 </div>
-                <!-- Copy Code -->
-                <div *ngIf="btn.type === 'COPY_CODE'" class="form-group">
-                  <label>Code Example</label>
-                  <input [(ngModel)]="btn.example" [name]="'buttonExample' + i"
-                         placeholder="Example OTP (e.g., 123456)" required />
-                </div>
-                <button type="button" class="btn-remove" (click)="removeButton(i)">
-                  ❌
+
+                <button type="button" class="btn-remove" (click)="removeButton(i)" title="Remove button">
+                  ❌ Remove
                 </button>
               </div>
-              <div *ngIf="buttonsComp.buttons && buttonsComp.buttons.length === 0" class="note-text">
-                No buttons added. Click "Add Button" to create up to 4 buttons.
+
+              <div *ngIf="!buttonsComp.buttons || buttonsComp.buttons.length === 0" class="note-text">
+                💡 Buttons are optional. You can add up to {{ template.category === 'AUTHENTICATION' ? 1 : 10 }} buttons.
               </div>
-              <div *ngIf="template.category === 'AUTHENTICATION' && buttonsComp.buttons && buttonsComp.buttons.length > 0 && buttonsComp.buttons[0].type !== 'COPY_CODE'" class="note-text">
-                Authentication templates typically use a single Copy Code button.
+
+              <div *ngIf="template.category === 'AUTHENTICATION' && buttonsComp.buttons && buttonsComp.buttons.length > 1" 
+                   class="note-text">
+                ⚠️ Authentication templates can only have one OTP button.
               </div>
             </div>
           </div>
         </section>
-        <button type="submit" class="btn-submit" [disabled]="!templateForm.valid || !isFormValid()">
+
+        <button type="submit" class="btn-submit" [disabled]="!isFormValid()">
           🚀 Create Template
         </button>
       </form>
+
       <div *ngIf="successMessage" class="alert alert-success">
-        {{ successMessage }}
+        ✅ {{ successMessage }}
       </div>
       <div *ngIf="errorMessage" class="alert alert-error">
-        {{ errorMessage }}
+        ❌ {{ errorMessage }}
       </div>
     </div>
   </div>
+
   <!-- Preview Section -->
   <div class="preview-section">
     <div class="whatsapp-preview">
@@ -271,51 +286,76 @@
           <div class="header-dots">⋮</div>
         </div>
       </div>
+      
       <div class="chat-area">
         <div class="message-bubble" [ngClass]="{'rtl': isPreviewRTL()}" *ngIf="hasPreviewContent()">
+          
           <!-- Header Preview -->
-          <div class="message-header" *ngIf="template.components && template.components[0] as headerComp">
-            <div *ngIf="headerComp.format === 'TEXT' && headerComp.text" class="header-text">
-              {{ renderPreview('HEADER') }}
+          <ng-container *ngIf="template.category !== 'AUTHENTICATION'">
+            <div class="message-header" *ngIf="template.components && template.components[0] as headerComp" [ngClass]="{'rtl': isPreviewRTL()}">
+              <div *ngIf="headerComp.format === 'TEXT' && headerComp.text" class="header-text">
+                {{ renderPreview('HEADER') }}
+              </div>
+              <div *ngIf="headerComp.format === 'IMAGE' && getMediaPreviewUrl('HEADER')" class="media-preview">
+                <img [src]="getMediaPreviewUrl('HEADER')" alt="Header Image" (error)="handleMediaError($event, 'HEADER')">
+                <div class="media-placeholder" [style.display]="headerComp.mediaError ? 'block' : 'none'">🖼️ Image Preview</div>
+              </div>
+              <div *ngIf="headerComp.format === 'VIDEO' && getMediaPreviewUrl('HEADER')" class="media-preview">
+                <video [src]="getMediaPreviewUrl('HEADER')" controls (error)="handleMediaError($event, 'HEADER')">
+                </video>
+                <div class="media-placeholder" [style.display]="headerComp.mediaError ? 'block' : 'none'">🎥 Video Preview</div>
+              </div>
+              <div *ngIf="headerComp.format === 'DOCUMENT' && getMediaPreviewUrl('HEADER')" class="media-preview">
+                <div class="document-icon">📄</div>
+                <span>{{ getMediaFileName(getMediaPreviewUrl('HEADER')) }}</span>
+              </div>
             </div>
-            <div *ngIf="headerComp.format === 'IMAGE' && (headerComp.mediaUrl || headerComp.useVariable)" class="media-preview">
-              <img [src]="renderPreview('HEADER')" alt="Header Image" 
-                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-              <div class="media-placeholder" style="display: none;">🖼️ Image Preview ({{ renderPreview('HEADER') }})</div>
-            </div>
-            <div *ngIf="headerComp.format === 'VIDEO' && (headerComp.mediaUrl || headerComp.useVariable)" class="media-preview">
-              <video [src]="renderPreview('HEADER')" controls 
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-              </video>
-              <div class="media-placeholder" style="display: none;">🎥 Video Preview ({{ renderPreview('HEADER') }})</div>
-            </div>
-            <div *ngIf="headerComp.format === 'DOCUMENT' && (headerComp.mediaUrl || headerComp.useVariable)" class="media-preview">
-              <div class="document-icon">📄</div>
-              <span>{{ getMediaFileName(renderPreview('HEADER')) || 'Document' }}</span>
-            </div>
-          </div>
+          </ng-container>
+
           <!-- Body Preview -->
-          <div class="message-body" *ngIf="template.components && template.components[1].text">
-            <div *ngFor="let line of renderBodyPreviewLines()" class="body-line">{{ line }}</div>
+          <div class="message-body" *ngIf="template.components && template.components[1] as bodyComp" 
+               [ngClass]="{'rtl': isRTL(renderPreview('BODY'))}">
+            <div *ngFor="let line of renderBodyPreviewLines()" class="body-line">
+              {{ line }}
+            </div>
+            <div *ngIf="template.category === 'AUTHENTICATION'" class="body-line">
+              {{1}} is your verification code
+            </div>
+            <div *ngIf="template.category === 'AUTHENTICATION' && bodyComp.add_security_recommendation" 
+                 class="body-line">
+              For your security, do not share this code.
+            </div>
           </div>
+
           <!-- Footer Preview -->
-          <div class="message-footer" *ngIf="template.components && template.components[2].text">
-            {{ template.components[2].text }}
-          </div>
+          <ng-container *ngIf="template.components && template.components[2] as footerComp">
+            <div class="message-footer" *ngIf="footerComp.text || (template.category === 'AUTHENTICATION' && footerComp.code_expiration_minutes)" 
+                 [ngClass]="{'rtl': isRTL(footerComp.text || '')}">
+              {{ footerComp.text }}
+              <div *ngIf="template.category === 'AUTHENTICATION' && footerComp.code_expiration_minutes">
+                This code expires in {{ footerComp.code_expiration_minutes }} minutes.
+              </div>
+            </div>
+          </ng-container>
+
           <!-- Buttons Preview -->
-          <div class="button-preview" *ngIf="template.components && template.components[3] as buttonsComp">
-            <ng-container *ngIf="buttonsComp.buttons && buttonsComp.buttons.length > 0">
-              <button *ngFor="let btn of buttonsComp.buttons" [ngClass]="{'rtl-button': isPreviewRTL()}">
+          <ng-container *ngIf="template.components && template.components[3] as buttonsComp">
+            <div class="button-preview" *ngIf="buttonsComp.buttons && buttonsComp.buttons.length > 0"
+                 [ngClass]="{'rtl': isPreviewRTL()}">
+              <button *ngFor="let btn of buttonsComp.buttons" 
+                      [ngClass]="{'rtl-button': isPreviewRTL()}">
                 {{ renderButtonText(btn) }}
               </button>
-            </ng-container>
-          </div>
+            </div>
+          </ng-container>
+
           <div class="message-time">{{ getCurrentTime() }} ✓✓</div>
         </div>
+
         <div class="no-preview" *ngIf="!hasPreviewContent()">
           <div class="no-preview-icon">💬</div>
-          <p>Start creating your template to see preview</p>
-          <small>Fill in the template details and watch the magic happen!</small>
+          <p>Start creating your template</p>
+          <small>Fill in the form to see preview</small>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
   <div class="form-section">
     <div class="send-message-container">
       <div class="chat-header">
-        <img src="assets/whatsapp-logo.jpg" alt="WhatsApp Logo" class="logo">
+        <img src="assets/whatsapplogo.png" alt="WhatsApp Logo" class="logo">
         <h2>Send WhatsApp Message</h2>
       </div>
 
@@ -55,17 +55,43 @@
 
           <!-- Body Variables -->
           <div *ngFor="let variable of getBodyVariables(); let i = index" class="form-group">
-            <label>Body Variable {{ i + 1 }}</label>
+            <label>Body Variable {{ i + 1 }} {{ selectedTemplate.category === 'AUTHENTICATION' ? '(e.g., OTP Code)' : '' }}</label>
             <input type="text" [placeholder]="'Enter value for variable ' + (i + 1)" 
                    [(ngModel)]="templateBodyVariables[i]" [name]="'templateBodyVariable' + i" required />
           </div>
 
           <!-- Buttons -->
           <div *ngFor="let button of getDynamicButtons(); let i = index" class="form-group">
-            <ng-container *ngIf="button.type === 'URL' || button.type === 'PHONE_NUMBER'">
-              <label>{{ button.type === 'URL' ? 'URL Parameter' : 'Phone Number' }} for "{{ button.text }}"</label>
-              <input type="text" [placeholder]="button.type === 'URL' ? 'Enter URL' : 'Enter phone number'" 
+            <ng-container *ngIf="button.type === 'URL' && hasButtonVariables(button)">
+              <label>URL Parameter for "{{ button.text }}"</label>
+              <input type="text" class="otp-input" placeholder="Enter URL parameter (e.g., 50)" 
                      [(ngModel)]="templateButtonValues[i]" [name]="'templateButtonValue' + i" required />
+            </ng-container>
+            <ng-container *ngIf="button.type === 'URL' && !hasButtonVariables(button)">
+              <label>URL for "{{ button.text }}"</label>
+              <p class="fixed-value">{{ button.url }}</p>
+            </ng-container>
+            <ng-container *ngIf="button.type === 'PHONE_NUMBER'">
+              <label>Phone Number for "{{ button.text }}"</label>
+              <p class="fixed-value">{{ button.phone_number }}</p>
+            </ng-container>
+            <ng-container *ngIf="button.type === 'OTP' && button.otp_type === 'ONE_TAP'">
+              <label>OTP Code for "{{ button.text }}"</label>
+              <input type="text" class="otp-input" placeholder="Enter OTP code" 
+                     [(ngModel)]="templateButtonValues[i]" [name]="'templateButtonValue' + i" required />
+              <label>Autofill Text (optional)</label>
+              <input type="text" placeholder="e.g., Autofill" 
+                     [(ngModel)]="oneTapParams[i].autofillText" [name]="'oneTapAutofillText' + i" />
+              <label>Package Name</label>
+              <input type="text" placeholder="e.g., com.example.app" 
+                     [(ngModel)]="oneTapParams[i].packageName" [name]="'oneTapPackageName' + i" required />
+              <label>Signature Hash</label>
+              <input type="text" placeholder="e.g., a1b2c3d4..." 
+                     [(ngModel)]="oneTapParams[i].signatureHash" [name]="'oneTapSignatureHash' + i" required />
+            </ng-container>
+            <ng-container *ngIf="button.type === 'QUICK_REPLY' || (button.type === 'OTP' && button.otp_type === 'COPY_CODE') || button.type === 'CATALOG'">
+              <label>{{ button.type === 'QUICK_REPLY' ? 'Quick Reply' : button.type === 'OTP' ? 'Copy Code' : 'Catalog' }} Button: {{ button.text }}</label>
+              <p class="quick-reply-info">This button does not require parameters.</p>
             </ng-container>
           </div>
         </ng-container>
@@ -146,13 +172,16 @@
               <div *ngFor="let line of formatBodyText().split('\n')" class="body-line">
                 {{ line }}
               </div>
+              <div *ngIf="addSecurityRecommendation" class="body-line">
+                For your security, do not share this code.
+              </div>
             </div>
             <div *ngIf="getFooterText()" class="message-footer">
               {{ getFooterText() }}
             </div>
             <div *ngIf="getDynamicButtons().length" class="message-buttons">
               <div *ngFor="let button of getDynamicButtons(); let i = index" class="button-preview" [ngClass]="{'rtl-button': isPreviewRTL()}">
-                {{ button.text }} {{ button.type !== 'QUICK_REPLY' && templateButtonValues[i] ? '(' + templateButtonValues[i] + ')' : '' }}
+                {{ getButtonDisplayValue(button, i) }}
               </div>
             </div>
           </ng-container>

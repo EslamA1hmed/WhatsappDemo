@@ -1,0 +1,471 @@
+/* Base container */
+.whatsapp-messages {
+  padding: 16px;
+  min-height: calc(100vh - 80px);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f7fa;
+}
+
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  gap: 10px;
+  padding: 20px 20px 0 20px;
+  justify-content: center;
+  background: #f5f7fa;
+}
+
+.toggle-btn {
+  padding: 12px 30px;
+  border: none;
+  background: white;
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.toggle-btn:hover {
+  background: #f9fafb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #B00000 0%, #E60000 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(7, 94, 84, 0.3);
+}
+
+/* Messages Header */
+.messages-header {
+  color: #075e54;
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  margin-top: 20px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* Grid Layout for Messages */
+.messages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Message Card */
+.message-item {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  border: 3px solid #25d366;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  overflow: hidden; /* Prevent content overflow */
+}
+
+.message-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.message-item.status-delivered {
+  border-color: #25D366;
+}
+
+.message-item.status-read {
+  border-color: #34B7F1;
+}
+
+.message-item.status-sent {
+  border-color: #9E9E9E;
+}
+
+.message-item.status-failed {
+  border-color: #c62828;
+}
+
+.message-item.status-pending {
+  border-color: #e65100;
+}
+
+/* Message Header */
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recipient-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+}
+
+.avatar-circle {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.recipient-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; /* Prevent overflow */
+}
+
+.recipient-number {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 15px;
+  word-break: break-word; /* Ensure long numbers wrap */
+}
+
+.message-time {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.message-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.message-status.sent {
+  background: #e3f2fd;
+  color: #9E9E9E;
+}
+
+.message-status.delivered {
+  background: #e8f5e9;
+  color: #25D366;
+}
+
+.message-status.read {
+  background: #e8f5e9;
+  color: #34B7F1;
+}
+
+.message-status.failed {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.message-status.pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* Message Body */
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden; /* Prevent content overflow */
+}
+
+.message-content {
+  color: #374151;
+  line-height: 1.6;
+  font-size: 15px;
+  word-break: break-word; /* Ensure text wraps */
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+
+.message-content.rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Template Info */
+.template-info {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #075e54;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.template-name {
+  font-weight: 600;
+  color: #075e54;
+  margin-bottom: 8px;
+}
+
+.template-section {
+  margin: 6px 0;
+  color: #4b5563;
+}
+
+.template-section strong {
+  color: #1f2937;
+  display: inline-block;
+  min-width: 60px;
+}
+
+/* Media Preview */
+.media-preview {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f9fafb;
+  max-width: 100%;
+}
+
+.media-item {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.media-item:hover {
+  transform: scale(1.02);
+}
+
+.media-loading, .media-error {
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.media-loading {
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+.media-error {
+  color: #dc3545;
+  background: #fff5f5;
+}
+
+/* Document Preview */
+.document-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.document-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.document-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-name {
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.document-type {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Caption */
+.caption {
+  color: #4b5563;
+  font-size: 14px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+  line-height: 1.5;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.caption.rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Buttons */
+.message-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.button-preview {
+  background: #25d366;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(37, 211, 102, 0.3);
+  transition: background 0.2s;
+  word-break: break-word;
+}
+
+.button-preview:hover {
+  background: #20bd5b;
+}
+
+.button-preview.rtl-button {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 30px;
+  padding: 20px 0;
+}
+
+.pagination button {
+  background: #075e54;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.pagination button:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #128c7e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(7, 94, 84, 0.3);
+}
+
+.pagination span {
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 10px;
+}
+
+/* Loading and Error States */
+.loading, .error, .no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 16px;
+}
+
+.error {
+  color: #dc3545;
+  background: #ffe5e5;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .whatsapp-messages {
+    padding: 10px;
+  }
+
+  .messages-header {
+    font-size: 24px;
+  }
+
+  .messages-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    padding: 0 10px;
+  }
+
+  .message-item {
+    padding: 12px;
+  }
+
+  .message-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .media-preview {
+    max-width: 100%;
+  }
+
+  .recipient-number, .message-content, .caption, .button-preview {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .messages-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pagination button {
+    width: 100%;
+    max-width: 200px;
+  }
+}

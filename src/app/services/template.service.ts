@@ -21,12 +21,19 @@ export class TemplateService {
     });
     return this.http.get<WhatsAppTemplatesResponseDTO>(`${this.baseUrl}/get-all`, { headers });
   }
-  createTemplate(templateData: any): Observable<any> {
-  const headers = new HttpHeaders({
-    'Authorization': `Bearer ${this.authService.getToken()}`,
-    'Content-Type': 'application/json'
-  });
-  return this.http.post(`${this.baseUrl}/create`, templateData, { headers });
-}
 
+  createTemplate(templateData: any): Observable<any> {
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${this.authService.getToken()}`,
+      'Content-Type': 'application/json'
+    });
+    return this.http.post(`${this.baseUrl}/create`, templateData, { headers });
+  }
+
+  uploadMedia(formData: FormData): Observable<any> {
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${this.authService.getToken()}`,
+    });
+    return this.http.post(`${this.baseUrl}/upload-media`, formData, { headers });
+  }
 }

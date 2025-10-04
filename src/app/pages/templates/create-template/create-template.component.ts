@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, ElementRef, Pipe, PipeTransform } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TemplateService } from '../../../services/template.service';
@@ -8,16 +8,18 @@ type ComponentType = 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
 interface Variable {
   placeholder: string; // e.g., {{1}}
   example: string;
-  type: 'text' | 'url' | 'phone_number'; // To distinguish variable type
 }
 
 interface Button {
-  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER' | 'COPY_CODE';
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER' | 'OTP';
   text?: string;
   url?: string;
   phone_number?: string;
-  example?: string;
   variables?: Variable[];
+  otp_type?: 'ONE_TAP' | 'COPY_CODE';
+  autofill_text?: string;
+  package_name?: string;
+  signature_hash?: string;
 }
 
 interface TemplateComponent {
@@ -26,43 +28,17 @@ interface TemplateComponent {
   format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   variables?: Variable[];
   mediaUrl?: string;
-  useVariable?: boolean;
   buttons?: Button[];
-  mediaError?: boolean; // Track media loading errors
-}
-
-interface TemplateExample {
-  header_text?: string[];
-  body_text?: string[][];
-  header_handle?: string[];
-  buttons?: { type: string; example?: string[] }[];
-}
-
-@Pipe({ name: 'buttonTextVariables', standalone: true })
-export class ButtonTextVariablesPipe implements PipeTransform {
-  transform(variables: Variable[] | undefined): Variable[] {
-    return variables?.filter(v => v.type === 'text') || [];
-  }
-}
-
-@Pipe({ name: 'buttonUrlVariables', standalone: true })
-export class ButtonUrlVariablesPipe implements PipeTransform {
-  transform(variables: Variable[] | undefined): Variable[] {
-    return variables?.filter(v => v.type === 'url') || [];
-  }
-}
-
-@Pipe({ name: 'buttonPhoneVariables', standalone: true })
-export class ButtonPhoneVariablesPipe implements PipeTransform {
-  transform(variables: Variable[] | undefined): Variable[] {
-    return variables?.filter(v => v.type === 'phone_number') || [];
-  }
+  mediaError?: boolean;
+  add_security_recommendation?: boolean;
+  code_expiration_minutes?: number;
+  previewMediaUrl?: string;
 }
 
 @Component({
   selector: 'app-create-template',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonTextVariablesPipe, ButtonUrlVariablesPipe, ButtonPhoneVariablesPipe],
+  imports: [CommonModule, FormsModule],
   templateUrl: './create-template.component.html',
   styleUrls: ['./create-template.component.css']
 })
@@ -74,9 +50,9 @@ export class CreateTemplateComponent {
     category: 'UTILITY',
     language: 'en_US',
     components: [
-      { type: 'HEADER' as const, text: '', format: 'TEXT' as const, variables: [] as Variable[], mediaUrl: '', useVariable: false, mediaError: false },
-      { type: 'BODY' as const, text: '', format: 'TEXT' as const, variables: [] as Variable[] },
-      { type: 'FOOTER' as const, text: '', format: 'TEXT' as const },
+      { type: 'HEADER' as const, text: '', format: 'TEXT', variables: [], mediaUrl: '', mediaError: false, previewMediaUrl: '' },
+      { type: 'BODY' as const, format: 'TEXT', variables: [], add_security_recommendation: false },
+      { type: 'FOOTER' as const, text: '', format: 'TEXT', code_expiration_minutes: undefined },
       { type: 'BUTTONS' as const, buttons: [] as Button[] }
     ] as TemplateComponent[]
   };
@@ -101,10 +77,8 @@ export class CreateTemplateComponent {
     const texts = [
       header?.text || '',
       header?.variables?.map(v => v.example).join('') || '',
-      body?.text || '',
-      body?.variables?.map(v => v.example).join('') || '',
       footer?.text || '',
-      buttons?.buttons?.map(b => b.text || b.example || '').join('') || ''
+      buttons?.buttons?.map(b => b.text || '').join('') || ''
     ].filter(Boolean);
 
     return texts.some(text => this.isRTL(text));
@@ -117,10 +91,22 @@ export class CreateTemplateComponent {
       headerComp.format = 'TEXT';
       headerComp.variables = [];
       headerComp.mediaUrl = '';
-      headerComp.useVariable = false;
       headerComp.mediaError = false;
+      headerComp.previewMediaUrl = '';
       const buttonsComp = this.template.components[3];
       buttonsComp.buttons = [];
+      const bodyComp = this.template.components[1];
+      bodyComp.text = '';
+      bodyComp.variables = [];
+      bodyComp.add_security_recommendation = true;
+      const footerComp = this.template.components[2];
+      footerComp.text = '';
+      footerComp.code_expiration_minutes = 10;
+    } else {
+      const bodyComp = this.template.components[1];
+      bodyComp.add_security_recommendation = false;
+      const footerComp = this.template.components[2];
+      footerComp.code_expiration_minutes = undefined;
     }
   }
 
@@ -128,68 +114,49 @@ export class CreateTemplateComponent {
     const headerComp = this.template.components[0];
     headerComp.variables = [];
     headerComp.mediaUrl = '';
-    headerComp.useVariable = false;
+    headerComp.previewMediaUrl = '';
     headerComp.text = '';
     headerComp.mediaError = false;
   }
 
-  onUseVariableChange(componentType: ComponentType) {
-    const comp = this.template.components.find(c => c.type === componentType);
-    if (!comp) return;
-    if (comp.useVariable) {
-      comp.variables = [];
-      comp.mediaUrl = '{{1}}';
-      this.addVariable(componentType);
-    } else {
-      comp.variables = [];
-      comp.mediaUrl = '';
-      comp.mediaError = false;
-    }
-  }
-
   addVariable(componentType: ComponentType) {
+    if (this.template.category === 'AUTHENTICATION' && componentType === 'BODY') {
+      return; // No variables can be added for authentication body
+    }
+
     const comp = this.template.components.find(c => c.type === componentType);
     if (!comp) return;
 
-    if (!comp.variables) {
-      comp.variables = [];
-    }
-
-    if (comp.format !== 'TEXT' && comp.variables.length >= 1) {
-      alert('Media headers support only one variable ({{1}}) for the URL.');
+    if (comp.type === 'HEADER' && comp.variables!.length >= 1) {
+      alert('Text headers support only one variable ({{1}}).');
       return;
     }
 
-    const idx = comp.variables.length + 1;
+    const idx = comp.variables!.length + 1;
     const placeholder = `{{${idx}}}`;
-    comp.variables.push({ placeholder, example: '', type: comp.format === 'TEXT' ? 'text' : 'url' });
+    comp.variables!.push({ placeholder, example: '' });
 
-    if (comp.format === 'TEXT') {
+    if (comp.type === 'HEADER' && comp.format === 'TEXT') {
       comp.text = (comp.text ? comp.text + ' ' : '') + placeholder;
-    } else if (comp.useVariable) {
-      comp.mediaUrl = placeholder;
+    } else if (comp.type === 'BODY') {
+      comp.text = (comp.text ? comp.text + ' ' : '') + placeholder;
     }
   }
 
   removeVariable(componentType: ComponentType, index: number) {
+    if (this.template.category === 'AUTHENTICATION' && componentType === 'BODY') {
+      return; // No variables to remove for authentication body
+    }
+
     const comp = this.template.components.find(c => c.type === componentType);
     if (!comp || !comp.variables) return;
 
     const removedVar = comp.variables[index];
     comp.variables.splice(index, 1);
 
-    if (comp.format === 'TEXT' && comp.text) {
-      comp.text = comp.text.replace(new RegExp(`\\s*${this.escapeRegExp(removedVar.placeholder)}\\s*`, 'g'), ' ');
-      comp.text = comp.text.replace(/\s+/g, ' ').trim();
+    if ((comp.type === 'HEADER' && comp.format === 'TEXT') || comp.type === 'BODY') {
+      comp.text = comp.text?.replace(new RegExp(`\\s*${this.escapeRegExp(removedVar.placeholder)}\\s*`, 'g'), ' ').trim();
       this.reindexVariables(comp);
-    } else if (comp.useVariable && comp.mediaUrl) {
-      if (comp.variables.length === 0) {
-        comp.mediaUrl = '';
-        comp.mediaError = false;
-      } else {
-        this.reindexVariables(comp);
-        comp.mediaUrl = comp.variables[0].placeholder;
-      }
     }
   }
 
@@ -201,18 +168,18 @@ export class CreateTemplateComponent {
       buttonsComp.buttons = [];
     }
 
-    if (buttonsComp.buttons.length >= 4) {
-      alert('Maximum of 4 buttons allowed.');
+    if (buttonsComp.buttons.length >= (this.template.category === 'AUTHENTICATION' ? 1 : 10)) {
+      alert(`Maximum of ${this.template.category === 'AUTHENTICATION' ? 1 : 10} button(s) allowed.`);
       return;
     }
 
     const newButton: Button = {
-      type: this.template.category === 'AUTHENTICATION' ? 'COPY_CODE' : 'QUICK_REPLY',
-      text: '',
+      type: this.template.category === 'AUTHENTICATION' ? 'OTP' : 'QUICK_REPLY',
+      text: this.template.category === 'AUTHENTICATION' ? 'Copy Code' : '',
       url: '',
       phone_number: '',
-      example: '',
-      variables: []
+      variables: [],
+      otp_type: this.template.category === 'AUTHENTICATION' ? 'COPY_CODE' : undefined
     };
     buttonsComp.buttons.push(newButton);
   }
@@ -223,32 +190,26 @@ export class CreateTemplateComponent {
     buttonsComp.buttons.splice(index, 1);
   }
 
-  addButtonVariable(buttonIndex: number, variableType: 'text' | 'url' | 'phone_number') {
+  addButtonVariable(buttonIndex: number) {
     const buttonsComp = this.template.components.find(c => c.type === 'BUTTONS');
     if (!buttonsComp || !buttonsComp.buttons) return;
 
     const btn = buttonsComp.buttons[buttonIndex];
+    if (btn.type !== 'URL') return;
+
     if (!btn.variables) {
       btn.variables = [];
     }
 
-    const existingVars = btn.variables.filter(v => v.type === variableType);
-    if (existingVars.length >= 1) {
-      alert(`Only one ${variableType} variable is allowed per button.`);
+    if (btn.variables.length >= 1) {
+      alert('Only one URL variable is allowed per button.');
       return;
     }
 
     const idx = btn.variables.length + 1;
     const placeholder = `{{${idx}}}`;
-    btn.variables.push({ placeholder, example: '', type: variableType });
-
-    if (variableType === 'text') {
-      btn.text = (btn.text ? btn.text + ' ' : '') + placeholder;
-    } else if (variableType === 'url') {
-      btn.url = (btn.url ? btn.url + '/' : '') + placeholder;
-    } else if (variableType === 'phone_number') {
-      btn.phone_number = placeholder;
-    }
+    btn.variables.push({ placeholder, example: '' });
+    btn.url = (btn.url ? btn.url + '/' : 'https://example.com/') + placeholder;
   }
 
   removeButtonVariable(buttonIndex: number, variableIndex: number) {
@@ -261,12 +222,8 @@ export class CreateTemplateComponent {
     const removedVar = btn.variables[variableIndex];
     btn.variables.splice(variableIndex, 1);
 
-    if (removedVar.type === 'text' && btn.text) {
-      btn.text = btn.text.replace(new RegExp(`\\s*${this.escapeRegExp(removedVar.placeholder)}\\s*`, 'g'), ' ').trim();
-    } else if (removedVar.type === 'url' && btn.url) {
+    if (btn.url) {
       btn.url = btn.url.replace(new RegExp(`/*${this.escapeRegExp(removedVar.placeholder)}/*`, 'g'), '').trim();
-    } else if (removedVar.type === 'phone_number' && btn.phone_number) {
-      btn.phone_number = '';
     }
 
     this.reindexButtonVariables(btn);
@@ -280,25 +237,19 @@ export class CreateTemplateComponent {
     btn.text = '';
     btn.url = '';
     btn.phone_number = '';
-    btn.example = '';
     btn.variables = [];
+    btn.otp_type = undefined;
+    btn.autofill_text = undefined;
+    btn.package_name = undefined;
+    btn.signature_hash = undefined;
 
     if (btn.type === 'URL') {
       btn.url = 'https://example.com/{{1}}';
-      btn.variables = [{ placeholder: '{{1}}', example: 'https://example.com/product', type: 'url' }];
-    }
-  }
-
-  updateUrlVariable(index: number) {
-    const buttonsComp = this.template.components.find(c => c.type === 'BUTTONS');
-    if (!buttonsComp || !buttonsComp.buttons) return;
-
-    const btn = buttonsComp.buttons[index];
-    if (btn.type === 'URL' && btn.url && btn.variables) {
-      const urlVars = btn.variables.filter(v => v.type === 'url');
-      if (urlVars.length === 0 || !btn.url.includes(urlVars[0].placeholder)) {
-        btn.variables = btn.variables.filter(v => v.type !== 'url');
-      }
+      btn.variables = [{ placeholder: '{{1}}', example: '' }];
+    } else if (btn.type === 'OTP') {
+      btn.text = 'Copy Code';
+      btn.otp_type = 'COPY_CODE';
+      btn.autofill_text = 'Autofill';
     }
   }
 
@@ -308,10 +259,8 @@ export class CreateTemplateComponent {
       const oldPlaceholder = v.placeholder;
       const newPlaceholder = `{{${i + 1}}}`;
       v.placeholder = newPlaceholder;
-      if (comp.format === 'TEXT' && comp.text) {
-        comp.text = comp.text.replace(new RegExp(this.escapeRegExp(oldPlaceholder), 'g'), newPlaceholder);
-      } else if (comp.useVariable && comp.mediaUrl) {
-        comp.mediaUrl = newPlaceholder;
+      if ((comp.type === 'HEADER' && comp.format === 'TEXT') || comp.type === 'BODY') {
+        comp.text = comp.text?.replace(new RegExp(this.escapeRegExp(oldPlaceholder), 'g'), newPlaceholder) || '';
       }
     });
   }
@@ -322,12 +271,8 @@ export class CreateTemplateComponent {
       const oldPlaceholder = v.placeholder;
       const newPlaceholder = `{{${i + 1}}}`;
       v.placeholder = newPlaceholder;
-      if (v.type === 'text' && btn.text) {
-        btn.text = btn.text.replace(new RegExp(this.escapeRegExp(oldPlaceholder), 'g'), newPlaceholder);
-      } else if (v.type === 'url' && btn.url) {
+      if (btn.url) {
         btn.url = btn.url.replace(new RegExp(this.escapeRegExp(oldPlaceholder), 'g'), newPlaceholder);
-      } else if (v.type === 'phone_number' && btn.phone_number) {
-        btn.phone_number = btn.phone_number.replace(new RegExp(this.escapeRegExp(oldPlaceholder), 'g'), newPlaceholder);
       }
     });
   }
@@ -337,6 +282,10 @@ export class CreateTemplateComponent {
   }
 
   syncVariables(componentType: ComponentType) {
+    if (this.template.category === 'AUTHENTICATION' && componentType === 'BODY') {
+      return; // No variables for authentication body
+    }
+
     const comp = this.template.components.find(c => c.type === componentType);
     if (!comp) return;
 
@@ -348,10 +297,10 @@ export class CreateTemplateComponent {
     const placeholders = comp.text.match(/\{\{\d+\}\}/g) || [];
     const numbers = placeholders.map(p => parseInt(p.replace(/\{/g, '').replace(/\}/g, ''))).sort((a, b) => a - b);
 
-    comp.variables = comp.variables?.filter(v => {
+    comp.variables = comp.variables!.filter(v => {
       const varNumber = parseInt(v.placeholder.replace(/\{/g, '').replace(/\}/g, ''));
       return numbers.includes(varNumber);
-    }) || [];
+    });
 
     comp.variables.forEach((v, i) => {
       const oldPlaceholder = v.placeholder;
@@ -368,6 +317,7 @@ export class CreateTemplateComponent {
   }
 
   onBodyTextChange(newText: string) {
+    if (this.template.category === 'AUTHENTICATION') return;
     const bodyComp = this.template.components[1];
     bodyComp.text = newText;
     this.syncVariables('BODY');
@@ -416,6 +366,7 @@ export class CreateTemplateComponent {
   }
 
   onBodyKeydown(event: KeyboardEvent) {
+    if (this.template.category === 'AUTHENTICATION') return;
     const textarea = this.bodyText?.nativeElement;
     if (!textarea) return;
 
@@ -458,7 +409,6 @@ export class CreateTemplateComponent {
   }
 
   isValidMediaUrl(url: string): boolean {
-    // Simple validation to check if the URL is a valid format (starts with http or https)
     return /^https?:\/\//i.test(url);
   }
 
@@ -466,13 +416,10 @@ export class CreateTemplateComponent {
     const comp = this.template.components.find(c => c.type === componentType);
     if (!comp) return '';
 
-    if (comp.useVariable && comp.variables && comp.variables.length > 0) {
-      const v = comp.variables[0];
-      // Only return example if it's a valid URL
-      return v.example && this.isValidMediaUrl(v.example) ? v.example : '';
+    if (comp.previewMediaUrl && this.isValidMediaUrl(comp.previewMediaUrl)) {
+      return comp.previewMediaUrl;
     }
-    // Only return mediaUrl if it's a valid URL
-    return comp.mediaUrl && this.isValidMediaUrl(comp.mediaUrl) ? comp.mediaUrl : '';
+    return '';
   }
 
   handleMediaError(event: Event, componentType: ComponentType) {
@@ -492,8 +439,12 @@ export class CreateTemplateComponent {
       return this.getMediaPreviewUrl(componentType);
     }
 
+    if (componentType === 'BODY' && this.template.category === 'AUTHENTICATION') {
+      return '{{1}} is your verification code';
+    }
+
     let text = comp.text || '';
-    (comp.variables || []).forEach((v) => {
+    comp.variables?.forEach((v) => {
       const replacement = v.example && v.example.trim() !== '' ? v.example : v.placeholder;
       text = text.replace(new RegExp(this.escapeRegExp(v.placeholder), 'g'), replacement);
     });
@@ -501,15 +452,14 @@ export class CreateTemplateComponent {
   }
 
   renderButtonText(btn: Button): string {
-    if (btn.type === 'COPY_CODE') {
-      return 'Copy Code';
+    if (btn.type === 'OTP') {
+      return btn.text || 'Copy Code';
     }
-    let text = btn.text || 'Button';
-    (btn.variables || []).filter(v => v.type === 'text').forEach((v) => {
-      const replacement = v.example && v.example.trim() !== '' ? v.example : v.placeholder;
-      text = text.replace(new RegExp(this.escapeRegExp(v.placeholder), 'g'), replacement);
-    });
-    return text;
+    return btn.text || 'Button';
+  }
+
+  getButtonVariables(btn: Button): Variable[] {
+    return btn.type === 'URL' ? (btn.variables || []) : [];
   }
 
   getMediaFileName(url: string): string {
@@ -527,13 +477,17 @@ export class CreateTemplateComponent {
     const body = this.template.components[1];
     const footer = this.template.components[2];
     const buttons = this.template.components[3];
-    return !!(
-      (header.format === 'TEXT' && header.text && this.template.category !== 'AUTHENTICATION') ||
-      (header.format !== 'TEXT' && (header.mediaUrl || (header.useVariable && header.variables && header.variables.length > 0)) && this.template.category !== 'AUTHENTICATION') ||
-      body.text ||
-      footer.text ||
-      (buttons.buttons && buttons.buttons.length > 0)
-    );
+
+    const hasHeader = this.template.category !== 'AUTHENTICATION' && 
+                     header && 
+                     ((header.format === 'TEXT' && header.text) ||
+                      (header.format !== 'TEXT' && header.mediaUrl));
+
+    const hasBody = this.template.category === 'AUTHENTICATION' || (body && body.text);
+    const hasFooter = footer && (footer.text || (this.template.category === 'AUTHENTICATION' && footer.code_expiration_minutes));
+    const hasButtons = buttons && buttons.buttons && buttons.buttons.length > 0;
+
+    return !!(hasHeader || hasBody || hasFooter || hasButtons);
   }
 
   getCurrentTime(): string {
@@ -552,156 +506,208 @@ export class CreateTemplateComponent {
     if (this.template.category === 'AUTHENTICATION') {
       return !!(
         this.template.name &&
-        bodyComp.text &&
-        bodyComp.variables && bodyComp.variables.length > 0 &&
-        (!buttonsComp.buttons || buttonsComp.buttons.length === 0 ||
-         (buttonsComp.buttons.length === 1 && buttonsComp.buttons[0].type === 'COPY_CODE' && buttonsComp.buttons[0].example))
+        this.template.name.match(/^[a-z0-9_]+$/) &&
+        (!buttonsComp.buttons || buttonsComp.buttons.length <= 1) &&
+        (!buttonsComp.buttons || buttonsComp.buttons.every(btn => btn.type === 'OTP' && btn.otp_type))
       );
     }
 
     return !!(
       this.template.name &&
+      this.template.name.match(/^[a-z0-9_]+$/) &&
       bodyComp.text &&
-      (!headerComp.useVariable || (headerComp.variables && headerComp.variables.every(v => v.example))) &&
+      (!headerComp.variables?.length || headerComp.variables.every(v => v.example)) &&
       (!buttonsComp.buttons || buttonsComp.buttons.every(btn =>
-        (btn.type === 'QUICK_REPLY' && btn.text && (!btn.variables?.some(v => v.type === 'text') || btn.variables.every(v => v.type === 'text' && v.example))) ||
-        (btn.type === 'URL' && btn.text && btn.url &&
-         (!btn.variables?.some(v => v.type === 'text' || v.type === 'url') ||
-          btn.variables.every(v => (v.type === 'text' || v.type === 'url') && v.example))) ||
-        (btn.type === 'PHONE_NUMBER' && btn.text && btn.phone_number &&
-         (!btn.variables?.some(v => v.type === 'text' || v.type === 'phone_number') ||
-          btn.variables.every(v => (v.type === 'text' || v.type === 'phone_number') && v.example)))
+        (btn.type === 'QUICK_REPLY' && btn.text) ||
+        (btn.type === 'URL' && btn.text && btn.url && (!btn.variables || btn.variables.every(v => v.example))) ||
+        (btn.type === 'PHONE_NUMBER' && btn.text && btn.phone_number)
       ))
     );
   }
 
- onSubmit() {
-  this.successMessage = '';
-  this.errorMessage = '';
-
-  // sanitize template name to satisfy Meta's requirement: lowercase + underscores only
-  const safeName = (this.template.name || '').trim()
-    .toLowerCase()
-    .replace(/\s+/g, '_');
-
-  const payload = {
-    name: safeName,
-    category: this.template.category,
-    language: this.template.language,
-    components: this.template.components.map(c => {
-      const base: any = { type: c.type };
-      const example: TemplateExample = {};
-
-      // BUTTONS handling
-      if (c.type === 'BUTTONS' && c.buttons && c.buttons.length > 0) {
-        base.buttons = c.buttons.map(btn => {
-          const button: any = { type: btn.type };
-          if (btn.type === 'QUICK_REPLY') {
-            button.text = btn.text || '';
-            if (btn.variables && btn.variables.some(v => v.type === 'text')) {
-              example.buttons = example.buttons || [];
-              example.buttons.push({
-                type: 'QUICK_REPLY',
-                example: btn.variables.filter(v => v.type === 'text').map(v => v.example || '')
-              });
-            }
-          } else if (btn.type === 'URL') {
-            button.text = btn.text || '';
-            button.url = btn.url || '';
-            if (btn.variables && btn.variables.length > 0) {
-              example.buttons = example.buttons || [];
-              example.buttons.push({
-                type: 'URL',
-                example: btn.variables.map(v => v.example || '')
-              });
-            }
-          } else if (btn.type === 'PHONE_NUMBER') {
-            button.text = btn.text || '';
-            button.phone_number = btn.phone_number || '';
-            if (btn.variables && btn.variables.some(v => v.type === 'text' || v.type === 'phone_number')) {
-              example.buttons = example.buttons || [];
-              example.buttons.push({
-                type: 'PHONE_NUMBER',
-                example: btn.variables.map(v => v.example || '')
-              });
-            }
-          } else if (btn.type === 'COPY_CODE') {
-            button.example = btn.example || '';
-          }
-          return button;
-        });
-
-        if (example.buttons && example.buttons.length > 0) {
-          base.example = example;
-        }
-        return base;
-      }
-
-      // TEXT format handling (HEADER text as TEXT included here)
-      if (c.format === 'TEXT') {
-        base.text = c.text || '';
-        // header text variables -> header_text
-        if (c.variables && c.variables.length > 0) {
-          if (c.type === 'HEADER') {
-            example.header_text = c.variables.map(v => v.example || '');
-          } else if (c.type === 'BODY') {
-            const lines = (c.text || '').split('\n').map(line => {
-              const varsInLine: string[] = [];
-              (c.variables || []).forEach(v => {
-                if (line.includes(v.placeholder)) {
-                  varsInLine.push(v.example || '');
-                }
-              });
-              return varsInLine;
-            }).filter(line => line.length > 0);
-            example.body_text = lines.length > 0 ? lines : undefined;
-          }
-        }
-      } else if (c.type === 'HEADER') {
-        // Non-text header (IMAGE, VIDEO, DOCUMENT) or header using variable
-        // Always include format if present
-        if (c.format) {
-          base.format = c.format;
-        }
-
-        if (c.useVariable && c.variables && c.variables.length > 0) {
-          // header is a variable placeholder like {{1}}
-          base.text = c.variables[0].placeholder;
-          example.header_handle = [c.variables[0].example || ''];
-        } else if (c.mediaUrl) {
-          // header is a direct media URL
-          base.text = c.mediaUrl;
-          example.header_handle = [c.mediaUrl];
-        }
-      }
-
-      // attach example if any
-      if (Object.keys(example).length > 0) {
-        base.example = example;
-      }
-
-      return base;
-    })
-    // filter out empty components and handle AUTHENTICATION header rule
-    .filter(c =>
-      (c.type !== 'HEADER' || this.template.category !== 'AUTHENTICATION') &&
-      (c.text || (c.example && Object.keys(c.example).length > 0) || (c.buttons && c.buttons.length > 0))
-    )
-  };
-
-  console.log('Payload:', JSON.stringify(payload, null, 2));
-
-  this.templateService.createTemplate(payload).subscribe({
-    next: () => {
-      this.successMessage = '✅ Template created successfully!';
-      this.errorMessage = '';
-    },
-    error: (err) => {
-      console.error('Error:', err);
-      // Show more detailed message if available from server response
-      const serverMsg = err?.error?.message || err?.message;
-      this.errorMessage = '❌ Failed to create template: ' + (serverMsg || 'Unknown error');
+  getAcceptType(format: string): string {
+    switch (format) {
+      case 'IMAGE':
+        return 'image/jpeg,image/png';
+      case 'VIDEO':
+        return 'video/mp4,video/3gpp';
+      case 'DOCUMENT':
+        return 'application/pdf';
+      default:
+        return '*/*';
     }
-  });
-}
+  }
+
+  onMediaFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const headerComp = this.template.components[0];
+      const mimeType = file.type;
+      
+      // Create local preview URL
+      headerComp.previewMediaUrl = URL.createObjectURL(file);
+
+      // Upload to backend
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', mimeType);
+
+      this.templateService.uploadMedia(formData).subscribe({
+        next: (response: any) => {
+          headerComp.mediaUrl = response.id;
+          console.log('Media uploaded, handle:', headerComp.mediaUrl);
+        },
+        error: (err) => {
+          console.error('Upload error:', err);
+          this.errorMessage = 'Failed to upload media.';
+          if (headerComp.previewMediaUrl) {
+            URL.revokeObjectURL(headerComp.previewMediaUrl);
+            headerComp.previewMediaUrl = '';
+          }
+        }
+      });
+    }
+  }
+
+  onSubmit() {
+    this.successMessage = '';
+    this.errorMessage = '';
+
+    // Sanitize template name
+    const safeName = (this.template.name || '').trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+
+    const payload = {
+      name: safeName,
+      category: this.template.category,
+      language: this.template.language,
+      components: this.template.components
+        .map((c, index) => {
+          if (this.isEmptyComponent(c, index)) {
+            return null;
+          }
+
+          const base: any = { type: c.type };
+
+          // BUTTONS
+          if (c.type === 'BUTTONS' && c.buttons && c.buttons.length > 0) {
+            base.buttons = c.buttons.map(btn => {
+              const button: any = { type: btn.type };
+              
+              if (btn.type === 'QUICK_REPLY') {
+                button.text = btn.text || '';
+              } else if (btn.type === 'URL') {
+                button.text = btn.text || '';
+                button.url = btn.url || '';
+                if (btn.variables && btn.variables.length > 0) {
+                  button.example = btn.variables.map(v => v.example || 'example');
+                }
+              } else if (btn.type === 'PHONE_NUMBER') {
+                button.text = btn.text || '';
+                button.phone_number = btn.phone_number || '';
+              } else if (btn.type === 'OTP') {
+                button.otp_type = btn.otp_type || 'COPY_CODE';
+                button.text = btn.text || 'Copy Code';
+                if (btn.autofill_text) button.autofill_text = btn.autofill_text;
+                if (btn.package_name) button.package_name = btn.package_name;
+                if (btn.signature_hash) button.signature_hash = btn.signature_hash;
+              }
+              return button;
+            });
+          }
+
+          // HEADER (TEXT)
+          if (c.type === 'HEADER' && c.format === 'TEXT' && c.text) {
+            base.format = 'TEXT';
+            base.text = c.text;
+            if (c.variables && c.variables.length > 0) {
+              base.example = { header_text: c.variables.map(v => v.example || 'example') };
+            }
+          }
+
+          // HEADER (MEDIA: IMAGE, VIDEO, DOCUMENT)
+          else if (c.type === 'HEADER' && c.format !== 'TEXT') {
+            base.format = c.format;
+            if (c.mediaUrl) {
+              base.example = { header_handle: [c.mediaUrl] };
+            }
+          }
+
+          // BODY
+          if (c.type === 'BODY') {
+            if (this.template.category === 'AUTHENTICATION') {
+              if (c.add_security_recommendation) {
+                base.add_security_recommendation = c.add_security_recommendation;
+              }
+            } else {
+              base.text = c.text;
+              if (c.variables && c.variables.length > 0) {
+                base.example = { body_text: [c.variables.map(v => v.example || 'example')] };
+              }
+            }
+          }
+
+          // FOOTER
+          if (c.type === 'FOOTER' && (c.text || (this.template.category === 'AUTHENTICATION' && c.code_expiration_minutes))) {
+            base.text = c.text || '';
+            if (this.template.category === 'AUTHENTICATION' && c.code_expiration_minutes) {
+              base.code_expiration_minutes = c.code_expiration_minutes;
+            }
+          }
+
+          return base;
+        })
+        .filter(c => c !== null)
+        .filter(c => !(c.type === 'HEADER' && this.template.category === 'AUTHENTICATION'))
+    };
+
+    // Additional validation for IMAGE, VIDEO, DOCUMENT headers
+    const headerComp = payload.components.find((c: any) => c.type === 'HEADER');
+    if (headerComp && headerComp.format !== 'TEXT' && !headerComp.example?.header_handle) {
+      this.errorMessage = '❌ Media header requires a valid media handle.';
+      return;
+    }
+
+    console.log('✅ Payload:', JSON.stringify(payload, null, 2));
+    this.sendTemplateToAPI(payload);
+  }
+
+  private isEmptyComponent(component: TemplateComponent, index: number): boolean {
+    if (component.type === 'BUTTONS') {
+      return !component.buttons || component.buttons.length === 0;
+    }
+    
+    if (component.type === 'HEADER') {
+      if (this.template.category === 'AUTHENTICATION') return true;
+      if (component.format === 'TEXT') return !component.text;
+      return !component.mediaUrl;
+    }
+    
+    if (component.type === 'BODY') {
+      return this.template.category !== 'AUTHENTICATION' && !component.text;
+    }
+    
+    if (component.type === 'FOOTER') {
+      return !component.text && !(this.template.category === 'AUTHENTICATION' && component.code_expiration_minutes);
+    }
+    
+    return true;
+  }
+
+  private sendTemplateToAPI(payload: any) {
+    this.templateService.createTemplate(payload).subscribe({
+      next: () => {
+        this.successMessage = '✅ Template created successfully!';
+        this.errorMessage = '';
+      },
+      error: (err) => {
+        console.error('Error:', err);
+        const serverMsg = err?.error?.error?.message || err?.error?.message || err?.message;
+        this.errorMessage = '❌ Failed to create template: ' + (serverMsg || 'Unknown error');
+      }
+    });
+  }
 }

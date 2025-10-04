@@ -121,6 +121,33 @@ select {
   appearance: none;
 }
 
+/* OTP and ONE_TAP Inputs */
+.otp-input {
+  border-left: 4px solid #25d366;
+  padding-left: 8px;
+  background: rgba(37, 211, 102, 0.05);
+}
+
+/* Fixed Values (URLs, Phone Numbers) */
+.fixed-value {
+  color: #1f2937;
+  font-size: 14px;
+  padding: 12px 14px;
+  background: #f1f1f1;
+  border-radius: 8px;
+  margin: 8px 0 0 0;
+  word-break: break-all;
+  border: 1px solid #e1f5e1;
+}
+
+/* Quick Reply, Copy Code, and Catalog Info */
+.quick-reply-info {
+  color: #667085;
+  font-size: 13px;
+  font-style: italic;
+  margin: 8px 0 0 0;
+}
+
 /* Buttons */
 .btn-submit {
   background: linear-gradient(135deg, #075e54, #128c7e);

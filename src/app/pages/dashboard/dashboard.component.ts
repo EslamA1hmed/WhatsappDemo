@@ -5,11 +5,12 @@ import { Title } from '@angular/platform-browser';
 import { SendMessageComponent } from '../send-message/send-message.component';
 import { TemplateListComponent } from '../templates/template-list.component';
 import { CreateTemplateComponent } from '../templates/create-template/create-template.component';
+import { MessagesComponent } from './messages/messages.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, SendMessageComponent, TemplateListComponent, CreateTemplateComponent],
+  imports: [CommonModule, SendMessageComponent, TemplateListComponent, CreateTemplateComponent, MessagesComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })

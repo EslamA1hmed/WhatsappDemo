@@ -33,10 +33,13 @@ export class SendMessageComponent {
   templateHeaderVariables: string[] = []; // For header text variables
   templateHeaderMedia = ''; // For header media (IMAGE/VIDEO/DOCUMENT)
   templateBodyVariables: string[] = []; // For body variables
-  templateButtonValues: string[] = []; // For button parameters (URL/PHONE_NUMBER)
-  headerComponent: ComponentDTO | null = null; // Store header component
-  headerFormat: string | null = null; // Store header format
-  footerText: string | null = null; // Store footer text
+  templateButtonValues: string[] = []; // For button parameters (URL/OTP)
+  oneTapParams: { autofillText: string; packageName: string; signatureHash: string }[] = []; // For ONE_TAP buttons
+  headerComponent: ComponentDTO | null = null;
+  headerFormat: string | null = null;
+  footerText: string | null = null;
+  addSecurityRecommendation: boolean | null = null;
+  codeExpirationMinutes: number | null = null;
 
   errorMsg = '';
   successMsg = '';
@@ -46,14 +49,12 @@ export class SendMessageComponent {
     this.loadTemplateNames();
   }
 
-  // Check if text is RTL (Arabic or other RTL languages)
   isRTL(text: string): boolean {
     if (!text) return false;
-    const rtlRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/; // Arabic, Arabic Supplement, Arabic Extended
+    const rtlRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
     return rtlRegex.test(text);
   }
 
-  // Determine if the preview should be RTL based on header, body, or footer text
   isPreviewRTL(): boolean {
     if (this.type === 'text' && this.textBody) {
       return this.isRTL(this.textBody);
@@ -89,7 +90,6 @@ export class SendMessageComponent {
 
   onTypeChange(event: any) {
     this.type = event.target.value;
-    // Reset fields when type changes
     this.textBody = '';
     this.imageLink = '';
     this.imageCaption = '';
@@ -103,31 +103,31 @@ export class SendMessageComponent {
     this.templateHeaderMedia = '';
     this.templateBodyVariables = [];
     this.templateButtonValues = [];
+    this.oneTapParams = [];
     this.headerComponent = null;
     this.headerFormat = null;
     this.footerText = null;
+    this.addSecurityRecommendation = null;
+    this.codeExpirationMinutes = null;
     this.errorMsg = '';
     this.successMsg = '';
   }
 
   onTemplateChange(event: any) {
-    this.errorMsg = ''; // Clear error message when selecting a new template
+    this.errorMsg = '';
     this.selectedTemplateName = event.target.value;
     if (this.selectedTemplateName) {
       this.http.get<TemplateDTO>(`http://localhost:8080/template/${this.selectedTemplateName}`)
         .subscribe({
           next: (res) => {
             this.selectedTemplate = res;
-            // Initialize header component and format
             this.headerComponent = this.selectedTemplate?.components?.find(c => c.type === 'HEADER') || null;
             this.headerFormat = this.headerComponent?.format || null;
-            // Initialize header variables
             if (this.headerComponent?.example?.header_text) {
               this.templateHeaderVariables = new Array(this.headerComponent.example.header_text.length).fill('');
             } else {
               this.templateHeaderVariables = [];
             }
-            // Initialize body variables
             const bodyComponent = this.selectedTemplate?.components?.find(c => c.type === 'BODY');
             if (bodyComponent?.example?.body_text) {
               const variableCount = bodyComponent.example.body_text[0]?.length || 0;
@@ -135,16 +135,31 @@ export class SendMessageComponent {
             } else {
               this.templateBodyVariables = [];
             }
-            // Initialize button values
             const buttonComponent = this.selectedTemplate?.components?.find(c => c.type === 'BUTTONS');
             if (buttonComponent?.buttons) {
-              this.templateButtonValues = new Array(buttonComponent.buttons.filter(b => ['URL', 'PHONE_NUMBER'].includes(b.type)).length).fill('');
+              // Only URL buttons with variables and ONE_TAP OTP buttons need input
+              const dynamicButtons = buttonComponent.buttons.filter(b => 
+                (b.type === 'URL' && b.example && b.example.length > 0) || 
+                (b.type === 'OTP' && b.otp_type === 'ONE_TAP')
+              );
+              this.templateButtonValues = new Array(dynamicButtons.length).fill('');
+              this.oneTapParams = buttonComponent.buttons.map(b => 
+                b.type === 'OTP' && b.otp_type === 'ONE_TAP' 
+                  ? { 
+                      autofillText: b.autofill_text || 'Autofill', 
+                      packageName: b.package_name || '', 
+                      signatureHash: b.signature_hash || '' 
+                    }
+                  : { autofillText: '', packageName: '', signatureHash: '' }
+              );
             } else {
               this.templateButtonValues = [];
+              this.oneTapParams = [];
             }
-            // Initialize footer text
             const footerComponent = this.selectedTemplate?.components?.find(c => c.type === 'FOOTER');
             this.footerText = footerComponent?.text || null;
+            this.addSecurityRecommendation = bodyComponent?.add_security_recommendation || null;
+            this.codeExpirationMinutes = footerComponent?.code_expiration_minutes || null;
           },
           error: (err) => {
             this.errorMsg = `❌ Error fetching template: ${err.message || err.statusText}`;
@@ -152,9 +167,12 @@ export class SendMessageComponent {
             this.headerComponent = null;
             this.headerFormat = null;
             this.footerText = null;
+            this.addSecurityRecommendation = null;
+            this.codeExpirationMinutes = null;
             this.templateHeaderVariables = [];
             this.templateBodyVariables = [];
             this.templateButtonValues = [];
+            this.oneTapParams = [];
           }
         });
     } else {
@@ -162,10 +180,17 @@ export class SendMessageComponent {
       this.headerComponent = null;
       this.headerFormat = null;
       this.footerText = null;
+      this.addSecurityRecommendation = null;
+      this.codeExpirationMinutes = null;
       this.templateHeaderVariables = [];
       this.templateBodyVariables = [];
       this.templateButtonValues = [];
+      this.oneTapParams = [];
     }
+  }
+
+  hasButtonVariables(button: ButtonDTO): boolean {
+    return button.type === 'URL' && !!button.example && button.example.length > 0;
   }
 
   onSend() {
@@ -231,10 +256,6 @@ export class SendMessageComponent {
         this.errorMsg = '⚠️ Please fill all body variables.';
         return;
       }
-      if (!this.templateButtonValues.every(v => v)) {
-        this.errorMsg = '⚠️ Please fill all button parameters.';
-        return;
-      }
       if (this.hasHeaderVariables() && !this.templateHeaderVariables.every(v => v)) {
         this.errorMsg = '⚠️ Please fill all header variables.';
         return;
@@ -242,6 +263,21 @@ export class SendMessageComponent {
       if (this.hasHeaderMedia() && !this.templateHeaderMedia) {
         this.errorMsg = '⚠️ Please provide a header media link.';
         return;
+      }
+      const buttonComponent = this.selectedTemplate.components?.find(c => c.type === 'BUTTONS');
+      if (buttonComponent?.buttons) {
+        const dynamicButtons = buttonComponent.buttons.filter(b => 
+          (b.type === 'URL' && b.example && b.example.length > 0) || 
+          (b.type === 'OTP' && b.otp_type === 'ONE_TAP')
+        );
+        if (dynamicButtons.length > 0 && !this.templateButtonValues.slice(0, dynamicButtons.length).every(v => v)) {
+          this.errorMsg = '⚠️ Please fill all required button parameters.';
+          return;
+        }
+        if (dynamicButtons.some((b, i) => b.otp_type === 'ONE_TAP' && (!this.oneTapParams[i].packageName || !this.oneTapParams[i].signatureHash))) {
+          this.errorMsg = '⚠️ Please provide package name and signature hash for ONE_TAP buttons.';
+          return;
+        }
       }
 
       payload.template = {
@@ -276,22 +312,49 @@ export class SendMessageComponent {
       }
 
       // Buttons
-      const buttonComponent = this.selectedTemplate.components?.find(c => c.type === 'BUTTONS');
       if (buttonComponent?.buttons) {
         let buttonIndex = 0;
         buttonComponent.buttons.forEach((button, index) => {
-          if (['URL', 'PHONE_NUMBER'].includes(button.type) && this.templateButtonValues[buttonIndex]) {
+          if (button.type === 'URL' && this.hasButtonVariables(button)) {
             payload.template.components.push({
               type: 'button',
-              sub_type: button.type,
+              sub_type: 'URL',
               index,
               parameters: [{
-                type: button.type.toLowerCase(),
-                [button.type.toLowerCase()]: button.type === 'URL' ? { url: this.templateButtonValues[buttonIndex] } : { phone_number: this.templateButtonValues[buttonIndex] }
+                type: 'text',
+                text: this.templateButtonValues[buttonIndex]
               }]
             });
             buttonIndex++;
+          } else if (button.type === 'OTP' && button.otp_type === 'ONE_TAP' && this.templateButtonValues[buttonIndex]) {
+            const params: any = [{
+              type: 'text',
+              text: this.templateButtonValues[buttonIndex]
+            }];
+            if (this.oneTapParams[buttonIndex].autofillText) {
+              params.push({
+                type: 'autofill_text',
+                autofill_text: this.oneTapParams[buttonIndex].autofillText
+              });
+            }
+            if (this.oneTapParams[buttonIndex].packageName && this.oneTapParams[buttonIndex].signatureHash) {
+              params.push({
+                type: 'app_destination',
+                app_destination: {
+                  package_name: this.oneTapParams[buttonIndex].packageName,
+                  signature_hash: this.oneTapParams[buttonIndex].signatureHash
+                }
+              });
+            }
+            payload.template.components.push({
+              type: 'button',
+              sub_type: 'OTP',
+              index,
+              parameters: params
+            });
+            buttonIndex++;
           }
+          // QUICK_REPLY, PHONE_NUMBER, COPY_CODE, and CATALOG buttons don't need parameters
         });
       }
     }
@@ -366,7 +429,12 @@ export class SendMessageComponent {
   }
 
   getFooterText(): string {
-    return this.footerText || '';
+    let footerText = this.footerText || '';
+    if (this.codeExpirationMinutes) {
+      footerText = footerText ? `${footerText}\nThis code expires in ${this.codeExpirationMinutes} minutes.` 
+                             : `This code expires in ${this.codeExpirationMinutes} minutes.`;
+    }
+    return footerText;
   }
 
   getMediaFileName(url: string): string {
@@ -379,5 +447,9 @@ export class SendMessageComponent {
       minute: '2-digit',
       hour12: false
     });
+  }
+
+  getButtonDisplayValue(button: ButtonDTO, index: number): string {
+    return button.text; // Show the actual text on the button for all types
   }
 }

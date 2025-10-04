@@ -100,6 +100,11 @@ input, select, textarea {
   background: #fafffe;
 }
 
+input[type="file"] {
+  padding: 5px;
+  border: 2px solid #e1f5e1;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: #25d366;

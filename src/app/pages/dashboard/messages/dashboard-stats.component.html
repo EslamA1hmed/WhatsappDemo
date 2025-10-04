@@ -1,0 +1,76 @@
+<div class="dashboard-stats">
+  <h2 class="stats-header">📊 Messages Statistics</h2>
+  
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading statistics...</div>
+  </div>
+  
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+  
+  <div *ngIf="!loading && !error" class="stats-content">
+    
+    <!-- Total Messages Card -->
+    <div class="total-card">
+      <div class="total-icon">📱</div>
+      <div class="total-info">
+        <div class="total-label">Total Messages</div>
+        <div class="total-value">{{ totalMessages }}</div>
+      </div>
+    </div>
+    
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+      <div *ngFor="let stat of statistics" 
+           class="stat-card"
+           [style.border-left-color]="getStatusColor(stat.status)">
+        <div class="stat-icon" [style.background-color]="getStatusColor(stat.status) + '20'">
+          <span [style.color]="getStatusColor(stat.status)">
+            {{ getStatusIcon(stat.status) }}
+          </span>
+        </div>
+        <div class="stat-details">
+          <div class="stat-status">{{ stat.status }}</div>
+          <div class="stat-count">{{ stat.count }}</div>
+          <div class="stat-percentage">{{ getPercentage(stat.count) }}%</div>
+        </div>
+      </div>
+    </div>
+        
+    <!-- Pie Chart Visual -->
+    <div class="pie-container">
+      <h3 class="chart-title">Status Breakdown</h3>
+      <div class="pie-chart">
+        <svg viewBox="0 0 200 200" class="pie-svg">
+          <circle cx="100" cy="100" r="80" fill="none" 
+                  stroke="#f0f0f0" stroke-width="40"/>
+          <ng-container *ngFor="let stat of statistics; let i = index">
+            <circle cx="100" cy="100" r="80" fill="none"
+                    [attr.stroke]="getStatusColor(stat.status)"
+                    stroke-width="40"
+                    [attr.stroke-dasharray]="getStrokeDashArray(stat.count)"
+                    [attr.stroke-dashoffset]="getStrokeDashOffset(i)"
+                    transform="rotate(-90 100 100)"/>
+          </ng-container>
+        </svg>
+        <div class="pie-center">
+          <div class="pie-total">{{ totalMessages }}</div>
+          <div class="pie-label">Total</div>
+        </div>
+      </div>
+      
+      <div class="pie-legend">
+        <div *ngFor="let stat of statistics" class="legend-item">
+          <div class="legend-color" [style.background-color]="getStatusColor(stat.status)"></div>
+          <div class="legend-text">
+            <span class="legend-status">{{ stat.status }}</span>
+            <span class="legend-value">{{ stat.count }} ({{ getPercentage(stat.count) }}%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>

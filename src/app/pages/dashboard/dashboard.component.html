@@ -2,9 +2,12 @@
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-logo">
-      <img src="assets/logo.png" alt="Vodafone Logo">
+      <div class="logo-container">
+        <img src="assets/logo.png" alt="Vodafone Logo" class="vodafone-logo">
+        <span class="demo-title">WhatsApp Demo</span>
+      </div>
+      <div class="welcome-message">Welcome Eslam</div>
     </div>
-    <h2>WhatsApp Dashboard</h2>
     <ul>
       <li [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Dashboard</li>
       <li [class.active]="activeTab === 'send-message'" (click)="setTab('send-message')">Send Message</li>
@@ -12,24 +15,22 @@
       <li [class.active]="activeTab === 'create-template'" (click)="setTab('create-template')">Create Template</li>
       <li class="logout-btn" (click)="logout()">Logout</li>
     </ul>
+    <div class="powered-by">
+      <img src="assets/edafa.png" alt="Edafa Logo" class="edafa-logo">
+      <span>Powered by Edafa</span>
+    </div>
   </div>
-
   <!-- Content -->
   <div class="content">
     <div *ngIf="activeTab === 'dashboard'" class="tab-content dashboard-tab">
-      <div class="dashboard-cards">
-        <div class="card-placeholder">Welcome to Dashboard (Coming Soon)</div>
-      </div>
+      <app-messages></app-messages>
     </div>
-
     <div *ngIf="activeTab === 'send-message'" class="tab-content send-message-tab">
       <app-send-message></app-send-message>
     </div>
-
     <div *ngIf="activeTab === 'template-list'" class="tab-content template-list-tab">
       <app-template-list></app-template-list>
     </div>
-
     <div *ngIf="activeTab === 'create-template'" class="tab-content create-template-tab">
       <app-create-template></app-create-template>
     </div>

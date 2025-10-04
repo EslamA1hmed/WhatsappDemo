@@ -1,7 +1,9 @@
 <div class="template-list">
-  <button (click)="loadTemplates()">🔄 Load Templates</button>
+  <div class="templates-header">
+    <span>Created Templates</span>
+    <span class="load-trigger" [class.loading]="loading" (click)="loadTemplates()">{{ loading ? 'Loading...' : 'Load Templates' }}</span>
+  </div>
 
-  <div *ngIf="loading" class="loading">Loading templates...</div>
   <div *ngIf="errorMsg" class="error">{{ errorMsg }}</div>
 
   <div class="template-grid">
@@ -50,7 +52,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </ng-container>
   </div>

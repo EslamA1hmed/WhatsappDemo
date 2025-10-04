@@ -1,0 +1,178 @@
+<div class="whatsapp-messages">
+  <!-- View Toggle Tabs -->
+  <div class="view-toggle">
+    <button class="toggle-btn" 
+            [class.active]="activeView === 'messages'"
+            (click)="setView('messages')">
+      📱 Messages
+    </button>
+    <button class="toggle-btn" 
+            [class.active]="activeView === 'statistics'"
+            (click)="setView('statistics')">
+      📊 Statistics
+    </button>
+  </div>
+
+  <!-- Statistics View -->
+  <div *ngIf="activeView === 'statistics'">
+    <app-dashboard-stats></app-dashboard-stats>
+  </div>
+
+  <!-- Messages View -->
+  <div *ngIf="activeView === 'messages'">
+    <h2 class="messages-header">📱 Sent Messages</h2>
+
+    <div *ngIf="loading" class="loading">
+      <div>⏳ Loading messages...</div>
+    </div>
+
+    <div *ngIf="error" class="error">
+      ❌ {{ error }}
+    </div>
+
+    <div *ngIf="!loading && !error && messages.length === 0" class="no-messages">
+      📭 No messages sent yet.
+    </div>
+
+    <div class="messages-grid" *ngIf="!loading && !error && messages.length > 0">
+      <div class="message-item" 
+           *ngFor="let message of messages"
+           [ngClass]="'status-' + message.status">
+        <!-- Message Header -->
+        <div class="message-header">
+          <div class="recipient-info">
+            <div class="avatar-circle">
+              {{ getInitials(message.to) }}
+            </div>
+            <div class="recipient-details">
+              <span class="recipient-number">+{{ message.to }}</span>
+              <span class="message-time">{{ message.createdAt | date:'short' }}</span>
+            </div>
+          </div>
+          <span class="message-status" [ngClass]="message.status">
+            {{ getStatusIcon(message.status) }} {{ message.status }}
+          </span>
+        </div>
+
+        <!-- Message Body -->
+        <div class="message-body">
+          <!-- Template Message -->
+          <div class="template-info" *ngIf="message.templateName">
+            <div class="template-name">📋 Template: {{ message.templateName }}</div>
+            <div class="template-section" *ngIf="message.templateHeader">
+              <strong>Header:</strong> {{ message.templateHeader }}
+            </div>
+            <div class="template-section" *ngIf="message.templateBody">
+              <strong>Body:</strong> {{ message.templateBody }}
+            </div>
+            <div class="template-section" *ngIf="message.templateFooter">
+              <strong>Footer:</strong> {{ message.templateFooter }}
+            </div>
+          </div>
+
+          <!-- Regular Text Message -->
+          <div class="message-content" 
+               *ngIf="message.textBody && !message.templateName && !message.hasMedia"
+               [ngClass]="{'rtl': isRTL(message.textBody)}">
+            {{ message.textBody }}
+          </div>
+
+          <!-- Media Content - Image -->
+          <div class="media-preview" *ngIf="message.type === 'image'">
+            <div *ngIf="message.isLoadingMedia" class="media-loading">
+              ⏳ Loading image...
+            </div>
+            <ng-container *ngIf="message.mediaUrl && !message.isLoadingMedia">
+              <img [src]="message.mediaUrl" 
+                   alt="Image" 
+                   class="media-item"
+                   [style.display]="message.mediaLoaded ? 'block' : 'none'"
+                   (load)="onMediaLoad(message)"
+                   (error)="onMediaError(message)">
+              <div *ngIf="!message.mediaLoaded && !message.mediaError" 
+                   class="media-loading">
+                ⏳ Loading image...
+              </div>
+            </ng-container>
+            <div *ngIf="message.mediaError || (!message.mediaUrl && !message.mediaId)" class="media-error">
+              ⚠️ Unable to load image
+            </div>
+          </div>
+
+          <!-- Caption for Image -->
+          <div *ngIf="message.caption && message.type === 'image'" 
+               class="caption" 
+               [ngClass]="{'rtl': isRTL(message.caption)}">
+            {{ message.caption }}
+          </div>
+
+          <!-- Media Content - Video -->
+          <div class="media-preview" *ngIf="message.type === 'video'">
+            <div *ngIf="message.isLoadingMedia" class="media-loading">
+              ⏳ Loading video...
+            </div>
+            <ng-container *ngIf="message.mediaUrl && !message.isLoadingMedia">
+              <video [src]="message.mediaUrl" 
+                     controls 
+                     class="media-item"
+                     [style.display]="message.mediaLoaded ? 'block' : 'none'"
+                     (loadeddata)="onMediaLoad(message)"
+                     (error)="onMediaError(message)">
+              </video>
+              <div *ngIf="!message.mediaLoaded && !message.mediaError" 
+                   class="media-loading">
+                ⏳ Loading video...
+              </div>
+            </ng-container>
+            <div *ngIf="message.mediaError || (!message.mediaUrl && !message.mediaId)" class="media-error">
+              ⚠️ Unable to load video
+            </div>
+          </div>
+
+          <!-- Caption for Video -->
+          <div *ngIf="message.caption && message.type === 'video'" 
+               class="caption" 
+               [ngClass]="{'rtl': isRTL(message.caption)}">
+            {{ message.caption }}
+          </div>
+
+          <!-- Media Content - Document -->
+          <div class="document-preview" *ngIf="message.type === 'document'">
+            <div class="document-icon">📄</div>
+            <div class="document-details">
+              <div class="document-name">{{ message.filename || 'Document' }}</div>
+              <div class="document-type" *ngIf="message.mimeType">{{ message.mimeType }}</div>
+            </div>
+          </div>
+
+          <!-- Caption for Document -->
+          <div *ngIf="message.caption && message.type === 'document'" 
+               class="caption" 
+               [ngClass]="{'rtl': isRTL(message.caption)}">
+            {{ message.caption }}
+          </div>
+
+          <!-- Buttons -->
+          <div class="message-buttons" *ngIf="message.hasButtons">
+            <div *ngFor="let button of message.buttons" 
+                 class="button-preview" 
+                 [ngClass]="{'rtl-button': isRTL(button.text)}">
+              {{ button.text }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && !error && totalPages > 1">
+      <button (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 0">
+        ← Previous
+      </button>
+      <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+      <button (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages - 1">
+        Next →
+      </button>
+    </div>
+  </div>
+</div>
