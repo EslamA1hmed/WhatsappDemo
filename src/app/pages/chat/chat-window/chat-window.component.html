@@ -1,0 +1,442 @@
+<div class="chat-layout" *ngIf="contact">
+  <!-- Left Side: Chat Window -->
+  <div class="chat-main">
+    <div class="chat-window">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <button class="back-btn" (click)="emitBackToSidebar()" *ngIf="isMobile()" aria-label="Back to sidebar">⬅</button>
+        <button class="close-btn" (click)="clearChat()" title="Close Chat" aria-label="Close chat">✕</button>
+        <div class="contact-avatar">
+          {{ getInitials(contact.name || contact.phoneNumber) }}
+        </div>
+        <div class="contact-details">
+          <h3>{{ contact.name || contact.phoneNumber }}</h3>
+          <span class="phone-number">+{{ contact.phoneNumber }}</span>
+        </div>
+      </div>
+
+      <!-- Messages Area -->
+      <div class="messages-area" #messagesContainer (scroll)="onMessagesScroll($event)">
+        <div *ngIf="loading && messages.length > 0" class="loading-more">
+          <div class="spinner"></div>
+          Loading more...
+        </div>
+        <div *ngIf="loading && messages.length === 0" class="loading-messages">
+          <div class="spinner"></div>
+          Loading messages...
+        </div>
+        <div *ngIf="!loading && messages.length === 0" class="empty-chat">
+          <div class="empty-icon">💬</div>
+          <p>No messages yet</p>
+          <span>Start a conversation</span>
+        </div>
+
+        <div *ngFor="let message of messages; trackBy: trackByIndex"
+             class="message-wrapper"
+             [class.sent]="message.direction === 'SENT'"
+             [class.received]="message.direction === 'RECEIVED'"
+             (click)="onMessageClick(message)">
+          <!-- Reply Context -->
+          <div class="reply-context" *ngIf="message.contextMessageId">
+            <div class="reply-content">
+              <span class="reply-to">Replying to</span>
+              <span class="reply-text">{{ getReplyText(message.contextMessageId) }}</span>
+            </div>
+          </div>
+
+          <!-- Message Bubble -->
+          <div class="message-bubble"
+               [class.has-media]="message.mediaUrl"
+               [class.clickable]="true">
+            <!-- Media -->
+            <div class="message-media" *ngIf="message.mediaUrl">
+              <img *ngIf="message.type === 'image'"
+                   [src]="message.mediaUrl"
+                   alt="Image"
+                   class="media-image">
+              <video *ngIf="message.type === 'video'"
+                     [src]="message.mediaUrl"
+                     controls
+                     class="media-video">
+              </video>
+            </div>
+
+            <!-- Text or Template Content -->
+            <div class="message-text"
+                 *ngIf="message.type === 'text' && message.textBody"
+                 [class.rtl]="isRTL(message.textBody)">
+              {{ message.textBody }}
+            </div>
+
+            <div class="message-template" *ngIf="message.type === 'template'">
+              <div class="template-name" *ngIf="message.templateName">{{ message.templateName }}</div>
+              <div class="template-header" *ngIf="message.templateHeader"
+                   [class.rtl]="isRTL(message.templateHeader)">
+                {{ message.templateHeader }}
+              </div>
+              <div class="template-body" *ngIf="message.templateBody"
+                   [class.rtl]="isRTL(message.templateBody)">
+                {{ message.templateBody }}
+              </div>
+              <div class="template-footer" *ngIf="message.templateFooter"
+                   [class.rtl]="isRTL(message.templateFooter)">
+                {{ message.templateFooter }}
+              </div>
+            </div>
+
+            <!-- Caption -->
+            <div class="message-caption"
+                 *ngIf="message.caption"
+                 [class.rtl]="isRTL(message.caption)">
+              {{ message.caption }}
+            </div>
+
+            <!-- Buttons -->
+            <div class="message-buttons" *ngIf="message.buttons && message.buttons.length > 0">
+              <button *ngFor="let button of message.buttons" class="button-item">
+                {{ button.text }}
+              </button>
+            </div>
+
+            <!-- Message Footer -->
+            <div class="message-footer">
+              <span class="message-time">{{ formatMessageTime(message.createdAt) }}</span>
+              <span class="message-status" *ngIf="message.direction === 'SENT'"
+                    [class.read]="message.status === 'read'">
+                {{ getStatusIcon(message.status) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reply Preview -->
+      <div class="reply-preview" *ngIf="replyingTo">
+        <div class="reply-bar"></div>
+        <div class="reply-info">
+          <span class="replying-label">Replying to</span>
+          <span class="replying-message">{{ getReplyPreview(replyingTo) }}</span>
+        </div>
+        <button class="cancel-reply" (click)="cancelReply()" aria-label="Cancel reply">✕</button>
+      </div>
+
+      <!-- Message Type Options -->
+      <div class="message-type-panel" *ngIf="messageType !== 'text'">
+        <!-- Image Fields -->
+        <div *ngIf="messageType === 'image'" class="message-form">
+          <div class="form-group">
+            <label class="field-label">Image URL</label>
+            <input type="text" 
+                   placeholder="https://example.com/image.jpg" 
+                   [(ngModel)]="imageLink" 
+                   class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="field-label">Caption (optional)</label>
+            <input type="text" 
+                   placeholder="Enter caption" 
+                   [(ngModel)]="imageCaption" 
+                   class="form-input">
+          </div>
+        </div>
+
+        <!-- Video Fields -->
+        <div *ngIf="messageType === 'video'" class="message-form">
+          <div class="form-group">
+            <label class="field-label">Video URL</label>
+            <input type="text" 
+                   placeholder="https://example.com/video.mp4" 
+                   [(ngModel)]="videoLink" 
+                   class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="field-label">Caption (optional)</label>
+            <input type="text" 
+                   placeholder="Enter caption" 
+                   [(ngModel)]="videoCaption" 
+                   class="form-input">
+          </div>
+        </div>
+
+        <!-- Document Fields -->
+        <div *ngIf="messageType === 'document'" class="message-form">
+          <div class="form-group">
+            <label class="field-label">Document URL</label>
+            <input type="text" 
+                   placeholder="https://example.com/file.pdf" 
+                   [(ngModel)]="docLink" 
+                   class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="field-label">Filename (optional)</label>
+            <input type="text" 
+                   placeholder="Document.pdf" 
+                   [(ngModel)]="docFilename" 
+                   class="form-input">
+          </div>
+        </div>
+
+        <!-- Template Fields -->
+        <div *ngIf="messageType === 'template'" class="message-form template-form">
+          <div class="form-group">
+            <label class="field-label">Select Template</label>
+            <select [(ngModel)]="selectedTemplateName" 
+                    (change)="onTemplateChange()" 
+                    class="form-select">
+              <option value="">Choose a template</option>
+              <option *ngFor="let name of templateNames" [value]="name">{{ name }}</option>
+            </select>
+          </div>
+
+          <div *ngIf="selectedTemplate" class="template-fields">
+            <!-- Header Variables -->
+            <div *ngIf="headerComponent?.format === 'TEXT' && templateHeaderVariables.length > 0" class="form-section">
+              <label class="section-label">Header Variables</label>
+              <div *ngFor="let v of templateHeaderVariables; let i = index; trackBy: trackByIndex" class="form-group">
+                <input type="text"
+                       [id]="'header-var-' + i"
+                       [attr.data-index]="i"
+                       [placeholder]="'Variable ' + (i + 1)"
+                       [value]="templateHeaderVariables[i]"
+                       (input)="templateHeaderVariables[i] = $any($event.target).value"
+                       class="form-input small">
+              </div>
+            </div>
+
+            <!-- Header Media -->
+            <div *ngIf="headerComponent && headerComponent.format && ['IMAGE','VIDEO','DOCUMENT'].includes(headerComponent.format)" class="form-section">
+              <label class="section-label">Header {{ headerFormat || 'Media' }}</label>
+              <div class="form-group">
+                <input type="text"
+                       placeholder="Media URL"
+                       [(ngModel)]="templateHeaderMedia"
+                       class="form-input">
+              </div>
+            </div>
+
+            <!-- Body Variables -->
+            <div *ngIf="templateBodyVariables.length > 0" class="form-section">
+              <label class="section-label">Body Variables</label>
+              <div *ngFor="let v of templateBodyVariables; let i = index; trackBy: trackByIndex" class="form-group">
+                <input type="text"
+                       [id]="'body-var-' + i"
+                       [attr.data-index]="i"
+                       [placeholder]="'Variable ' + (i + 1)"
+                       [value]="templateBodyVariables[i]"
+                       (input)="templateBodyVariables[i] = $any($event.target).value"
+                       class="form-input small">
+              </div>
+            </div>
+
+            <!-- Button Variables -->
+            <div *ngFor="let button of getDynamicButtons(); let i = index; trackBy: trackByButtonIndex" class="form-section">
+              <div *ngIf="button.type === 'URL' && hasButtonVariables(button)" class="form-group">
+                <label class="section-label">URL Parameter for "{{ button.text }}"</label>
+                <input type="text"
+                       [id]="'button-url-' + i"
+                       placeholder="Parameter value"
+                       [value]="templateButtonValues[i]"
+                       (input)="templateButtonValues[i] = $any($event.target).value"
+                       class="form-input small">
+              </div>
+              
+              <div *ngIf="button.type === 'OTP' && button.otp_type === 'ONE_TAP'">
+                <label class="section-label">OTP Details for "{{ button.text }}"</label>
+                <div class="form-group">
+                  <input type="text"
+                         [id]="'otp-code-' + i"
+                         placeholder="OTP Code"
+                         [value]="templateButtonValues[i]"
+                         (input)="templateButtonValues[i] = $any($event.target).value"
+                         class="form-input small">
+                </div>
+                <div class="form-group">
+                  <input type="text"
+                         [id]="'package-' + i"
+                         placeholder="Package Name"
+                         [value]="oneTapParams[i]?.packageName"
+                         (input)="oneTapParams[i].packageName = $any($event.target).value"
+                         class="form-input small">
+                </div>
+                <div class="form-group">
+                  <input type="text"
+                         [id]="'signature-' + i"
+                         placeholder="Signature Hash"
+                         [value]="oneTapParams[i]?.signatureHash"
+                         (input)="oneTapParams[i].signatureHash = $any($event.target).value"
+                         class="form-input small">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <button class="attach-btn" 
+                (click)="toggleMessageOptions()" 
+                title="Message Type"
+                [class.active]="showMessageOptions">
+          <span *ngIf="messageType === 'text'">📎</span>
+          <span *ngIf="messageType === 'image'">🖼️</span>
+          <span *ngIf="messageType === 'video'">🎥</span>
+          <span *ngIf="messageType === 'document'">📄</span>
+          <span *ngIf="messageType === 'template'">📋</span>
+        </button>
+
+        <!-- Message Type Options Dropdown -->
+        <div class="message-options" *ngIf="showMessageOptions">
+          <button class="option-btn" (click)="selectMessageType('text')">
+            <span class="option-icon">📝</span>
+            <span class="option-label">Text</span>
+          </button>
+          <button class="option-btn" (click)="selectMessageType('image')">
+            <span class="option-icon">🖼️</span>
+            <span class="option-label">Image</span>
+          </button>
+          <button class="option-btn" (click)="selectMessageType('video')">
+            <span class="option-icon">🎥</span>
+            <span class="option-label">Video</span>
+          </button>
+          <button class="option-btn" (click)="selectMessageType('document')">
+            <span class="option-icon">📄</span>
+            <span class="option-label">Document</span>
+          </button>
+          <button class="option-btn" (click)="selectMessageType('template')">
+            <span class="option-icon">📋</span>
+            <span class="option-label">Template</span>
+          </button>
+        </div>
+
+        <input
+          *ngIf="messageType === 'text'"
+          type="text"
+          placeholder="Type a message..."
+          [(ngModel)]="newMessage"
+          (keyup.enter)="sendMessage()"
+          class="message-input">
+
+        <button
+          class="send-btn"
+          (click)="sendMessage()"
+          [disabled]="messageType === 'text' && !newMessage.trim()">
+          <span class="send-icon">➤</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Preview Panel -->
+  <div class="preview-panel" [ngClass]="{'active': showPreview}">
+    <div class="preview-header">
+      <h3>📱 Message Preview</h3>
+    </div>
+    
+    <div class="whatsapp-preview">
+      <div class="preview-contact-header">
+        <div class="preview-avatar">
+          {{ getInitials(contact.name || contact.phoneNumber) }}
+        </div>
+        <div class="preview-contact-info">
+          <h4>{{ contact.name || contact.phoneNumber }}</h4>
+          <span>Online</span>
+        </div>
+      </div>
+
+      <div class="preview-chat-area">
+        <!-- Reply Context in Preview -->
+        <div class="preview-reply-context" *ngIf="replyingTo">
+          <div class="preview-reply-content">
+            <span class="preview-reply-to">Replying to</span>
+            <span class="preview-reply-text">{{ getReplyPreview(replyingTo) }}</span>
+          </div>
+        </div>
+
+        <!-- Message Preview -->
+        <div class="preview-message-bubble" [ngClass]="{'rtl': isPreviewRTL()}" *ngIf="hasPreviewContent()">
+          <!-- Template Preview -->
+          <ng-container *ngIf="messageType === 'template' && selectedTemplate">
+            <div *ngIf="hasHeaderVariables()" class="preview-message-header">
+              {{ formatHeaderText() }}
+            </div>
+            <div *ngIf="hasHeaderMedia()" class="preview-media">
+              <ng-container [ngSwitch]="headerFormat">
+                <img *ngSwitchCase="'IMAGE'" [src]="templateHeaderMedia" alt="Header Image Preview" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <video *ngSwitchCase="'VIDEO'" [src]="templateHeaderMedia" controls 
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                </video>
+                <div *ngSwitchCase="'DOCUMENT'" class="preview-document-icon">📄</div>
+                <div class="preview-media-placeholder" style="display: none;">
+                  {{ headerFormat }} Preview
+                </div>
+              </ng-container>
+            </div>
+            <div class="preview-message-body">
+              <div *ngFor="let line of formatBodyText().split('\n')" class="preview-body-line">
+                {{ line }}
+              </div>
+            </div>
+            <div *ngIf="getFooterText()" class="preview-message-footer">
+              {{ getFooterText() }}
+            </div>
+            <div *ngIf="getDynamicButtons().length" class="preview-message-buttons">
+              <div *ngFor="let button of getDynamicButtons()" class="preview-button">
+                {{ button.text }}
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Text Preview -->
+          <div *ngIf="messageType === 'text'" class="preview-message-body">
+            <div *ngFor="let line of (newMessage || 'Your text will appear here...').split('\n')" class="preview-body-line">{{ line }}</div>
+          </div>
+
+          <!-- Image Preview -->
+          <div *ngIf="messageType === 'image'" class="preview-media">
+            <img *ngIf="imageLink" [src]="imageLink" alt="Image Preview" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div class="preview-media-placeholder" style="display: none;">🖼️ Image Preview</div>
+            <div *ngIf="imageCaption" class="preview-caption">{{ imageCaption }}</div>
+          </div>
+
+          <!-- Video Preview -->
+          <div *ngIf="messageType === 'video'" class="preview-media">
+            <video *ngIf="videoLink" [src]="videoLink" controls 
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            </video>
+            <div class="preview-media-placeholder" style="display: none;">🎥 Video Preview</div>
+            <div *ngIf="videoCaption" class="preview-caption">{{ videoCaption }}</div>
+          </div>
+
+          <!-- Document Preview -->
+          <div *ngIf="messageType === 'document'" class="preview-media">
+            <div class="preview-document-icon">📄</div>
+            <span>{{ docFilename || 'Document.pdf' }}</span>
+          </div>
+
+          <div class="preview-message-time">{{ getCurrentTime() }} ✓✓</div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="preview-no-content" *ngIf="!hasPreviewContent()">
+          <div class="preview-empty-icon">💬</div>
+          <p>Start typing to see preview</p>
+          <small>Your message will appear here</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Toggle Button -->
+  <button class="preview-toggle-btn" (click)="togglePreview()" aria-label="Toggle preview panel">
+    {{ showPreview ? 'Hide Preview' : 'Show Preview' }}
+  </button>
+</div>
+
+<div class="no-chat-selected" *ngIf="!contact">
+  <div class="no-chat-icon">💬</div>
+  <h3>WhatsApp Chat</h3>
+  <p>Select a contact to start chatting</p>
+</div>

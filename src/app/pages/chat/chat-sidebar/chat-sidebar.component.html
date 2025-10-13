@@ -1,0 +1,90 @@
+<div class="chat-sidebar">
+  <!-- Header -->
+  <div class="sidebar-header">
+    <h3>💬 Chats</h3>
+    <button class="add-contact-btn" (click)="showAddContact = !showAddContact">
+      {{ showAddContact ? '✕' : '+' }}
+    </button>
+  </div>
+
+  <!-- Add Contact Form -->
+  <div class="add-contact-form" *ngIf="showAddContact">
+    <input 
+      type="text" 
+      placeholder="Phone Number (e.g., +1234567890)" 
+      [(ngModel)]="newContact.phoneNumber"
+      class="contact-input">
+    <input 
+      type="text" 
+      placeholder="Name" 
+      [(ngModel)]="newContact.name"
+      class="contact-input">
+    <div class="form-actions">
+      <button class="save-btn" (click)="addContact()">Save</button>
+      <button class="cancel-btn" (click)="cancelAddContact()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <input 
+      type="text" 
+      placeholder="🔍 Search contacts..." 
+      [(ngModel)]="searchTerm"
+      (input)="filterContacts()">
+  </div>
+
+  <!-- Contacts List -->
+  <div class="contacts-list">
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      Loading contacts...
+    </div>
+
+    <div *ngIf="!loading && filteredContacts.length === 0" class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>No contacts found</p>
+      <button class="add-first-btn" (click)="showAddContact = true">
+        Add your first contact
+      </button>
+    </div>
+
+    <div 
+      *ngFor="let contact of filteredContacts"
+      class="contact-item"
+      [class.active]="selectedContactId === contact.id"
+      (click)="selectContact(contact)">
+      
+      <div class="contact-avatar">
+        {{ getInitials(contact.name || contact.phoneNumber) }}
+      </div>
+
+      <div class="contact-info">
+        <div class="contact-header">
+          <span class="contact-name">{{ contact.name || contact.phoneNumber }}</span>
+          <span class="last-message-time" *ngIf="contact.lastMessageTime">
+            {{ formatTime(contact.lastMessageTime) }}
+          </span>
+        </div>
+        <div class="contact-footer">
+          <span class="last-message" *ngIf="contact.lastMessage">
+            {{ contact.lastMessage }}
+          </span>
+          <span class="last-message no-messages" *ngIf="!contact.lastMessage">
+            No messages yet
+          </span>
+          <span class="unread-badge" *ngIf="contact.unreadCount && contact.unreadCount > 0">
+            {{ contact.unreadCount }}
+          </span>
+        </div>
+      </div>
+
+      <button 
+        class="delete-btn" 
+        (click)="deleteContact($event, contact.id)"
+        title="Delete contact">
+        🗑️
+      </button>
+    </div>
+  </div>
+</div>

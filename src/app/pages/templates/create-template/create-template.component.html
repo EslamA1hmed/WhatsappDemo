@@ -153,8 +153,8 @@
           <div *ngIf="template.components && template.components[3] as buttonsComp">
             <div class="vars-block">
               <button type="button" class="btn-add-button" (click)="addButton()" 
-                      [disabled]="buttonsComp.buttons && buttonsComp.buttons.length >= (template.category === 'AUTHENTICATION' ? 1 : 10)">
-                ➕ Add Button (Max: {{ template.category === 'AUTHENTICATION' ? 1 : 10 }})
+                      [disabled]="buttonsComp.buttons && buttonsComp.buttons.length >= (template.category === 'AUTHENTICATION' ? 1 : 2)">
+                ➕ Add Button (Max: {{ template.category === 'AUTHENTICATION' ? 1 : 2 }})
               </button>
               
               <div *ngFor="let btn of buttonsComp.buttons; let i = index" class="button-row">
@@ -319,7 +319,6 @@
               {{ line }}
             </div>
             <div *ngIf="template.category === 'AUTHENTICATION'" class="body-line">
-              {{1}} is your verification code
             </div>
             <div *ngIf="template.category === 'AUTHENTICATION' && bodyComp.add_security_recommendation" 
                  class="body-line">

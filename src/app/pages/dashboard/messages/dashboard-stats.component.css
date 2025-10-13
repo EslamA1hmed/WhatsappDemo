@@ -1,7 +1,6 @@
 .dashboard-stats {
   padding: 20px;
   min-height: calc(100vh - 100px);
-  background: #f5f7fa;
 }
 
 .stats-header {
@@ -64,13 +63,13 @@
   padding: 30px;
   border-radius: 16px;
   display: flex;
-  flex-direction: column; /* Stack icon and info vertically */
-  align-items: center; /* Center horizontally */
-  justify-content: center; /* Center vertically */
-  gap: 15px;
+  flex-direction: row; /* تغيير إلى row لتظهر الأيقونة بجانب النص */
+  align-items: center; /* محاذاة العناصر عموديًا في المنتصف */
+  justify-content: center; /* محاذاة أفقيًا في المنتصف */
+  gap: 15px; /* المسافة بين الأيقونة والنص */
   box-shadow: 0 8px 16px rgba(7, 94, 84, 0.3);
   transition: transform 0.3s ease;
-  text-align: center; /* Ensure text is centered */
+  text-align: center; /* لضمان أن النص يظل مركزًا إذا احتاج */
 }
 
 .total-card:hover {
@@ -85,8 +84,8 @@
 
 .total-info {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: column; /* الحفاظ على ترتيب النص العمودي داخل .total-info */
+  align-items: center; /* محاذاة النص في المنتصف */
 }
 
 .total-label {

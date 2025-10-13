@@ -168,8 +168,8 @@ export class CreateTemplateComponent {
       buttonsComp.buttons = [];
     }
 
-    if (buttonsComp.buttons.length >= (this.template.category === 'AUTHENTICATION' ? 1 : 10)) {
-      alert(`Maximum of ${this.template.category === 'AUTHENTICATION' ? 1 : 10} button(s) allowed.`);
+    if (buttonsComp.buttons.length >= (this.template.category === 'AUTHENTICATION' ? 1 : 2)) {
+      alert(`Maximum of ${this.template.category === 'AUTHENTICATION' ? 1 : 2} button(s) allowed.`);
       return;
     }
 
@@ -408,9 +408,9 @@ export class CreateTemplateComponent {
     }
   }
 
-  isValidMediaUrl(url: string): boolean {
-    return /^https?:\/\//i.test(url);
-  }
+ isValidMediaUrl(url: string): boolean {
+  return /^https?:\/\/|^blob:/.test(url); // Allow blob: URLs for local previews
+}
 
   getMediaPreviewUrl(componentType: ComponentType): string {
     const comp = this.template.components.find(c => c.type === componentType);

@@ -431,8 +431,7 @@ export class SendMessageComponent {
   getFooterText(): string {
     let footerText = this.footerText || '';
     if (this.codeExpirationMinutes) {
-      footerText = footerText ? `${footerText}\nThis code expires in ${this.codeExpirationMinutes} minutes.` 
-                             : `This code expires in ${this.codeExpirationMinutes} minutes.`;
+      footerText =`This code expires in ${this.codeExpirationMinutes} minutes.`;
     }
     return footerText;
   }

@@ -1,0 +1,14 @@
+<div class="chat-container">
+  <div class="chat-sidebar-section" [class.hidden]="selectedContact && isMobile()">
+    <app-chat-sidebar
+      (contactSelected)="onContactSelected($event)">
+    </app-chat-sidebar>
+  </div>
+  
+  <div class="chat-window-section" [class.active]="selectedContact && isMobile()">
+    <app-chat-window
+      [contact]="selectedContact"
+      (backToSidebar)="onBackToSidebar()">
+    </app-chat-window>
+  </div>
+</div>

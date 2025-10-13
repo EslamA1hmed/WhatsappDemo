@@ -381,14 +381,28 @@ select {
 .whatsapp-preview {
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-y: auto; /* Enable vertical scrolling */
   box-shadow: 0 8px 20px rgba(0,0,0,0.12);
   height: fit-content;
-  max-height: 500px;
+  max-height: 600px; /* Increased max-height to accommodate larger content */
   position: sticky;
   top: 15px;
   border: 3px solid #25d366;
   max-width: 450px;
+}
+
+.whatsapp-preview::-webkit-scrollbar {
+  width: 6px;
+}
+
+.whatsapp-preview::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.whatsapp-preview::-webkit-scrollbar-thumb {
+  background: #25d366;
+  border-radius: 8px;
 }
 
 /* WhatsApp Header */
@@ -477,6 +491,7 @@ select {
   position: relative;
   word-wrap: break-word;
   border: 1px solid #c3f0ca;
+  overflow: hidden; /* Prevent content from overflowing the bubble */
 }
 
 .message-bubble::before {
@@ -611,12 +626,15 @@ select {
   border-radius: 10px;
   overflow: hidden;
   background: rgba(255,255,255,0.5);
+  max-height: 200px; /* Restrict max height to prevent overflow */
 }
 
 .media-preview img,
 .media-preview video {
   width: 100%;
   max-width: 300px;
+  max-height: 200px; /* Ensure media doesn't exceed container height */
+  object-fit: contain; /* Scale media to fit while preserving aspect ratio */
   border-radius: 10px;
   display: block;
 }
@@ -628,6 +646,10 @@ select {
   background: rgba(255,255,255,0.8);
   font-size: 13px;
   border-radius: 10px;
+  max-height: 200px; /* Match media max-height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .document-preview {
@@ -695,6 +717,10 @@ select {
   .media-preview img,
   .media-preview video {
     max-width: 280px;
+    max-height: 180px; /* Adjust for smaller screens */
+  }
+  .media-placeholder {
+    max-height: 180px;
   }
 }
 
@@ -712,7 +738,7 @@ select {
   .whatsapp-preview {
     position: relative;
     top: 0;
-    max-height: 480px;
+    max-height: 550px; /* Adjusted for smaller screens */
     margin: 0 auto;
     max-width: 400px;
   }
@@ -748,10 +774,14 @@ select {
   }
   .whatsapp-preview {
     max-width: 100%;
-    max-height: 450px;
+    max-height: 500px; /* Adjusted for mobile */
   }
   .media-preview img,
   .media-preview video {
     max-width: 100%;
+    max-height: 160px; /* Smaller height for mobile */
+  }
+  .media-placeholder {
+    max-height: 160px;
   }
 }

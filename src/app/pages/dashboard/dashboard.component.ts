@@ -6,16 +6,24 @@ import { SendMessageComponent } from '../send-message/send-message.component';
 import { TemplateListComponent } from '../templates/template-list.component';
 import { CreateTemplateComponent } from '../templates/create-template/create-template.component';
 import { MessagesComponent } from './messages/messages.component';
+import { ChatComponent } from '../chat/chat/chat.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, SendMessageComponent, TemplateListComponent, CreateTemplateComponent, MessagesComponent],
+  imports: [
+    CommonModule, 
+    SendMessageComponent, 
+    TemplateListComponent, 
+    CreateTemplateComponent, 
+    MessagesComponent,
+    ChatComponent
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent {
-  activeTab: 'dashboard' | 'send-message' | 'template-list' | 'create-template' = 'dashboard';
+  activeTab: 'dashboard' | 'chat' | 'send-message' | 'template-list' | 'create-template' = 'dashboard';
   router = inject(Router);
 
   constructor(private titleService: Title) {

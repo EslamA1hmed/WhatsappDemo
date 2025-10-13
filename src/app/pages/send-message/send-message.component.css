@@ -210,14 +210,25 @@ select {
 .whatsapp-preview {
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-y: auto; /* Enable vertical scrolling */
   box-shadow: 0 8px 20px rgba(0,0,0,0.12);
   height: fit-content;
-  max-height: 550px;
+  max-height: 600px; /* Increased to accommodate larger content */
   position: sticky;
   top: 15px;
   border: 3px solid #25d366;
   max-width: 500px;
+}
+.whatsapp-preview::-webkit-scrollbar {
+  width: 6px;
+}
+.whatsapp-preview::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+.whatsapp-preview::-webkit-scrollbar-thumb {
+  background: #25d366;
+  border-radius: 8px;
 }
 
 /* WhatsApp Header */
@@ -364,6 +375,7 @@ select {
   font-size: 14px;
   margin-top: 8px;
   line-height: 1.4;
+  display: block; /* Ensure caption is visible */
 }
 .caption.rtl {
   text-align: right;
@@ -404,13 +416,14 @@ select {
 .media-preview {
   margin-bottom: 10px;
   border-radius: 12px;
-  overflow: hidden;
   background: rgba(255,255,255,0.5);
 }
 .media-preview img,
 .media-preview video {
   width: 100%;
   max-width: 350px;
+  max-height: 200px; /* Restrict height to prevent overflow */
+  object-fit: contain; /* Scale media while preserving aspect ratio */
   border-radius: 12px;
   display: block;
 }
@@ -434,6 +447,10 @@ select {
   background: rgba(255,255,255,0.8);
   font-size: 14px;
   border-radius: 12px;
+  max-height: 200px; /* Match media max-height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .media-placeholder.rtl {
   text-align: right;
@@ -479,6 +496,10 @@ select {
   .media-preview img,
   .media-preview video {
     max-width: 320px;
+    max-height: 180px; /* Adjust for smaller screens */
+  }
+  .media-placeholder {
+    max-height: 180px;
   }
 }
 @media (max-width: 1200px) {
@@ -495,7 +516,7 @@ select {
   .whatsapp-preview {
     position: relative;
     top: 0;
-    max-height: 520px;
+    max-height: 550px; /* Adjusted for smaller screens */
     margin: 0 auto;
     max-width: 450px;
   }
@@ -524,10 +545,14 @@ select {
   }
   .whatsapp-preview {
     max-width: 100%;
-    max-height: 500px;
+    max-height: 500px; /* Adjusted for mobile */
   }
   .media-preview img,
   .media-preview video {
     max-width: 100%;
+    max-height: 160px; /* Smaller height for mobile */
+  }
+  .media-placeholder {
+    max-height: 160px;
   }
 }
