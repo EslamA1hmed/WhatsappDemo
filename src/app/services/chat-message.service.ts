@@ -151,6 +151,17 @@ export class ChatMessageService {
 
     return this.http.post(`${this.apiUrl}/send`, request, { headers });
   }
+  markMessagesAsRead(phoneNumber: string): Observable<any> {
+  const headers = new HttpHeaders({
+    'Authorization': `Bearer ${this.authService.getToken()}`
+  });
+  
+  return this.http.put(
+    `http://localhost:8080/incoming/messages/read/${phoneNumber}`,
+    {},
+    { headers }
+  );
+}
 
   getLastMessageForContact(phoneNumber: string): Observable<ChatMessage> {
     return this.http.get<ChatMessage>(`${this.messagesApiUrl}/last/${phoneNumber}`);

@@ -1,12 +1,19 @@
 <div class="template-list">
   <div class="templates-header">
     <span>Created Templates</span>
-    <span class="load-trigger" [class.loading]="loading" (click)="loadTemplates()">{{ loading ? 'Loading...' : 'Load Templates' }}</span>
+    <span class="load-trigger" [class.loading]="loading" (click)="loadTemplates()">
+      {{ loading ? 'Loading...' : 'Reload Templates' }}
+    </span>
   </div>
 
   <div *ngIf="errorMsg" class="error">{{ errorMsg }}</div>
 
-  <div class="template-grid">
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading Templates...</p>
+  </div>
+
+  <div *ngIf="!loading && templates.length > 0" class="template-grid">
     <ng-container *ngFor="let template of templates">
       <div class="template-card">
         <div class="template-header">
@@ -22,28 +29,23 @@
           📂 {{ template.category || 'N/A' }}
         </p>
 
-        <!-- WhatsApp-like Preview -->
         <div class="template-preview">
           <div class="chat-window">
             <div *ngFor="let comp of template.components || []">
-              <!-- HEADER -->
               <div *ngIf="comp.type === 'HEADER'" class="msg-bubble header">
                 {{ getComponentContent(comp) }}
               </div>
 
-              <!-- BODY -->
               <div *ngIf="comp.type === 'BODY'" class="msg-bubble body">
                 {{ getComponentContent(comp) }}
               </div>
 
-              <!-- Example body texts -->
               <div *ngIf="comp.example && getExampleBodyTexts(comp.example)?.length">
                 <div *ngFor="let bodyRow of getExampleBodyTexts(comp.example)" class="msg-bubble example">
                   {{ formatBodyRow(bodyRow) }}
                 </div>
               </div>
 
-              <!-- BUTTONS -->
               <div *ngIf="comp.buttons?.length" class="msg-buttons">
                 <button *ngFor="let btn of comp.buttons" class="wa-button">
                   {{ btn.text || 'Button' }}
@@ -55,4 +57,9 @@
       </div>
     </ng-container>
   </div>
+  
+  <div *ngIf="!loading && templates.length === 0 && !errorMsg" class="empty-state">
+    <p>No templates found. Click "Reload Templates" to try again.</p>
+  </div>
+
 </div>

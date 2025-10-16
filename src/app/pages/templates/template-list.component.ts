@@ -19,7 +19,9 @@ export class TemplateListComponent implements OnInit {
 
   constructor(private templateService: TemplateService) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.loadTemplates();
+  }
 
   loadTemplates() {
     this.loading = true;

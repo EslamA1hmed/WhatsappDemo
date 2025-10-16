@@ -1,17 +1,22 @@
 import { Component, inject, OnInit, OnDestroy, PLATFORM_ID } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from './message.service';
-import { MediaService } from './MediaService';
 import { Router } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
+import { forkJoin, map } from 'rxjs'; // ✨ 1. استيراد forkJoin و map
+
+// ✨ 2. استيراد الخدمات والنماذج اللازمة
+import { MessageService } from './message.service';
+import { MediaService } from '../../../services/MediaService';
+import { ContactService, Contact } from '../../../services/contact.service'; // تأكد من صحة المسار
 import { DashboardStatsComponent } from './dashboard-stats.component';
 
+// ✨ 3. إضافة الخاصية الجديدة للواجهة (Interface)
 interface Message {
   to: string;
   createdAt: string;
   status: string;
   type: string;
+  recipientName?: string; // ✅ الخاصية الجديدة لعرض الاسم
   textBody?: string;
   templateName?: string;
   templateHeader?: string;
@@ -43,7 +48,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   allMessages: Message[] = [];
   currentPage = 0;
   totalPages = 0;
-  pageSize = 6; // Changed from 5 to 6
+  pageSize = 6;
   loading = true;
   error = '';
   searchTerm = '';
@@ -53,6 +58,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   private mediaService = inject(MediaService);
   private router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+  private contactService = inject(ContactService); // ✨ 4. حقن خدمة جهات الاتصال
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
@@ -71,21 +77,37 @@ export class MessagesComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ✨ 5. تعديل دالة `loadMessages` بالكامل
   loadMessages() {
     this.loading = true;
     this.error = '';
-    
-    this.messageService.getMessages(this.currentPage, this.pageSize).subscribe({
-      next: (response: any) => {
-        console.log('Raw API Response:', response);
-        
-        this.allMessages = response.content.map((msg: Message) => {
-          console.log('Processing message:', msg);
-          
+
+    // إعداد الطلبات التي سيتم تنفيذها بالتوازي
+    const messagesRequest$ = this.messageService.getMessages(this.currentPage, this.pageSize);
+    const contactsRequest$ = this.contactService.getAllContacts(0, 200); // جلب عدد كبير من جهات الاتصال
+
+    forkJoin({
+      messagesResponse: messagesRequest$,
+      contacts: contactsRequest$
+    }).pipe(
+      map(({ messagesResponse, contacts }) => {
+        // إنشاء خريطة للبحث السريع باستخدام رقم الهاتف
+        const contactMap = new Map<string, string>();
+        contacts.forEach(contact => {
+          // قم بإزالة أي رموز غير رقمية لتوحيد الصيغة
+          const cleanPhoneNumber = contact.phoneNumber.replace(/\D/g, '');
+          contactMap.set(cleanPhoneNumber, contact.name);
+        });
+
+        // معالجة كل رسالة لإضافة اسم المستلم
+        const processedMessages = messagesResponse.content.map((msg: Message) => {
+          const cleanToNumber = msg.to.replace(/\D/g, '');
+          const recipientName = contactMap.get(cleanToNumber);
           const mediaUrl = msg.mediaUrl || msg.mediaURL;
-          
-          const processedMsg = {
+
+          return {
             ...msg,
+            recipientName: recipientName || `+${msg.to}`, // إذا لم يتم العثور على اسم، استخدم الرقم
             mediaUrl: mediaUrl,
             hasMedia: !!(mediaUrl || msg.mediaId),
             hasButtons: msg.buttons && msg.buttons.length > 0,
@@ -93,30 +115,31 @@ export class MessagesComponent implements OnInit, OnDestroy {
             mediaError: false,
             isLoadingMedia: false
           };
-          
-          console.log('Processed message:', processedMsg);
-          return processedMsg;
         });
-        
+
+        return { messages: processedMessages, totalPages: messagesResponse.totalPages };
+      })
+    ).subscribe({
+      next: ({ messages, totalPages }) => {
+        this.allMessages = messages;
         this.messages = [...this.allMessages];
-        
+        this.totalPages = totalPages;
+        this.loading = false;
+
         this.messages.forEach(msg => {
           if (msg.mediaId && !msg.mediaUrl && msg.hasMedia) {
-            console.log('Loading media for mediaId:', msg.mediaId);
             this.loadMediaUrl(msg);
           }
         });
-        
-        this.totalPages = response.totalPages;
-        this.loading = false;
       },
       error: (err: any) => {
         console.error('API Error:', err);
-        this.error = 'Failed to load messages. Please try again.';
+        this.error = 'Failed to load messages or contacts. Please try again.';
         this.loading = false;
       }
     });
   }
+
 
   loadMediaUrl(message: Message) {
     if (!message.mediaId || message.mediaUrl) return;
@@ -164,11 +187,24 @@ export class MessagesComponent implements OnInit, OnDestroy {
     return rtlRegex.test(text);
   }
 
-  getInitials(phoneNumber: string): string {
-    if (!phoneNumber) return '?';
-    const digits = phoneNumber.replace(/\D/g, '');
+  // ✨ 6. تعديل دالة `getInitials` لتكون أكثر ذكاءً
+  getInitials(nameOrPhone: string): string {
+    if (!nameOrPhone) return '?';
+    
+    // التحقق إذا كان الإدخال يحتوي على حروف (مما يعني أنه اسم)
+    if (/[a-zA-Z]/.test(nameOrPhone)) {
+      const words = nameOrPhone.trim().split(' ').filter(w => w);
+      if (words.length > 1) {
+        return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+      }
+      return nameOrPhone.substring(0, 2).toUpperCase();
+    }
+    
+    // إذا كان رقمًا، استخدم آخر رقمين
+    const digits = nameOrPhone.replace(/\D/g, '');
     return digits.slice(-2) || '??';
   }
+
 
   getStatusIcon(status: string): string {
     const icons: { [key: string]: string } = {
@@ -196,8 +232,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
     }
     
     const term = this.searchTerm.toLowerCase().trim();
+    // البحث بالاسم أو الرقم
     this.messages = this.allMessages.filter(msg => 
-      msg.to?.toLowerCase().includes(term)
+      msg.recipientName?.toLowerCase().includes(term) || msg.to?.toLowerCase().includes(term)
     );
   }
 

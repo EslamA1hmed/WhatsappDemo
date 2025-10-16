@@ -7,7 +7,7 @@ import { catchError, map } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class MediaService {
-  private apiUrl = '/api/media'; // Update with your backend URL
+  private apiUrl = 'http://localhost:8080/api/media'; // Update with your backend URL
 
   constructor(private http: HttpClient) {}
 

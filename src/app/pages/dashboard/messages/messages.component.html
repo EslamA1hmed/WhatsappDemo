@@ -42,10 +42,12 @@
         <div class="message-header">
           <div class="recipient-info">
             <div class="avatar-circle">
-              {{ getInitials(message.to) }}
+              <!-- ✨ 1. تعديل هنا لاستخدام الاسم أو الرقم -->
+              {{ getInitials(message.recipientName || message.to) }}
             </div>
             <div class="recipient-details">
-              <span class="recipient-number">+{{ message.to }}</span>
+              <!-- ✨ 2. تعديل هنا لعرض الاسم -->
+              <span class="recipient-number">{{ message.recipientName }}</span>
               <span class="message-time">{{ message.createdAt | date:'short' }}</span>
             </div>
           </div>
@@ -54,7 +56,7 @@
           </span>
         </div>
 
-        <!-- Message Body -->
+        <!-- Message Body (باقي الكود كما هو) -->
         <div class="message-body">
           <!-- Template Message -->
           <div class="template-info" *ngIf="message.templateName">

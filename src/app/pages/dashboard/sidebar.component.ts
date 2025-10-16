@@ -19,8 +19,8 @@ import { ChatComponent } from '../chat/chat/chat.component';
     MessagesComponent,
     ChatComponent
   ],
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
+  templateUrl: './sidebar.component.html',
+  styleUrls: ['./sidebar.component.css']
 })
 export class DashboardComponent {
   activeTab: 'dashboard' | 'chat' | 'send-message' | 'template-list' | 'create-template' = 'dashboard';

@@ -1,12 +1,13 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, AfterViewInit, SimpleChanges, ViewChild, ElementRef, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ChatMessageService, ChatMessage, MessagePageResponse } from '../../../services/chat-message.service';
 import { Contact } from '../../../services/contact.service';
 import { AuthService } from '../../../services/auth.service';
+import { WebSocketService } from '../../../services/websocket.service';
 import { debounceTime } from 'rxjs/operators';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 
 interface TemplateDTO {
   name: string;
@@ -26,6 +27,10 @@ interface ComponentDTO {
   buttons?: ButtonDTO[];
   add_security_recommendation?: boolean;
   code_expiration_minutes?: number;
+}
+export interface StatusDTO {
+  status: string;
+  messageId: string;
 }
 
 interface ButtonDTO {
@@ -47,11 +52,10 @@ interface ButtonDTO {
   templateUrl: './chat-window.component.html',
   styleUrls: ['./chat-window.component.css']
 })
-export class ChatWindowComponent implements OnInit, OnChanges {
+export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy,AfterViewInit {
   @Input() contact: Contact | null = null;
   @Output() backToSidebar = new EventEmitter<void>();
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
-
   messages: ChatMessage[] = [];
   loading = false;
   currentPage = 0;
@@ -61,9 +65,16 @@ export class ChatWindowComponent implements OnInit, OnChanges {
   replyingTo: ChatMessage | null = null;
   private scrollSubject = new Subject<void>();
 
+  @ViewChild('formPanelContainer') formPanelContainer!: ElementRef;
+  private formPanelObserver?: MutationObserver;
+
+  // WebSocket subscriptions
+  private messageSubscription?: Subscription;
+  private statusSubscription?: Subscription;
+
   messageType: 'text' | 'image' | 'video' | 'document' | 'template' = 'text';
   showMessageOptions = false;
-  showPreview = false; // Added to toggle preview on mobile
+  showPreview = false;
 
   imageLink = '';
   imageCaption = '';
@@ -87,7 +98,8 @@ export class ChatWindowComponent implements OnInit, OnChanges {
   constructor(
     private messageService: ChatMessageService,
     private http: HttpClient,
-    private authService: AuthService
+    private authService: AuthService,
+    private websocketService: WebSocketService
   ) {
     this.scrollSubject.pipe(debounceTime(100)).subscribe(() => {
       this.handleScroll();
@@ -96,31 +108,202 @@ export class ChatWindowComponent implements OnInit, OnChanges {
 
   ngOnInit() {
     if (this.contact) {
-      this.loadMessages();
-      this.loadTemplateNames();
+      this.initializeChat();
     }
   }
+ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
+    // بنشغل الحارس هنا مرة واحدة فقط بعد ما الصفحة تترسم
+    if (this.formPanelContainer) {
+      this.setupFormPanelObserver();
+    }
+  }
+  private setupFormPanelObserver() {
+    const targetNode = this.formPanelContainer.nativeElement;
 
+    // دي الدالة اللي هتشتغل كل ما الحارس يشوف تغيير
+    const callback = (mutationsList: MutationRecord[], observer: MutationObserver) => {
+      // أي تغيير بيحصل في حجم الفورم، بنعمل سكرول لتحت
+      setTimeout(() => this.scrollToBottom(), 0);
+    };
+
+    this.formPanelObserver = new MutationObserver(callback);
+
+    // بنقول للحارس يراقب أي إضافة أو حذف للعناصر جوه الفورم
+    const config = { childList: true, subtree: true };
+
+    this.formPanelObserver.observe(targetNode, config);
+  }
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['contact'] && changes['contact'].currentValue) {
-      this.messages = [];
-      this.currentPage = 0;
-      this.hasMore = true;
-      this.replyingTo = null;
-      this.resetMessageForm();
-      this.loadMessages();
-      this.loadTemplateNames();
-      this.showPreview = false; // Reset preview visibility
+    if (changes['contact']) {
+      const previousContact = changes['contact'].previousValue as Contact;
+      const currentContact = changes['contact'].currentValue as Contact;
+
+      // Unsubscribe from previous contact
+      if (previousContact) {
+        this.websocketService.unsubscribeFromContact(previousContact.phoneNumber);
+        this.cleanupSubscriptions();
+      }
+
+      // Initialize new contact
+      if (currentContact) {
+        // ✅ CRITICAL: Clear everything immediately
+        this.clearAllData();
+
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          this.initializeChat();
+        }, 50);
+      }
     }
   }
 
-  // TrackBy functions to fix cursor issue
+  ngOnDestroy() {
+    this.cleanupSubscriptions();
+    if (this.contact) {
+      this.websocketService.unsubscribeFromContact(this.contact.phoneNumber);
+    }
+    if (this.formPanelObserver) {
+      this.formPanelObserver.disconnect();
+    }
+  }
+
+  // ✅ NEW: Initialize chat for a contact
+  private initializeChat() {
+    if (!this.contact) return;
+
+    console.log('Initializing chat for:', this.contact.phoneNumber);
+
+    this.loadMessages();
+    this.loadTemplateNames();
+    this.setupWebSocketSubscriptions();
+  }
+
+  // ✅ NEW: Clear all data when switching contacts
+  private clearAllData() {
+    console.log('Clearing all data...');
+
+    // Clear messages array completely
+    this.messages = [];
+
+    // Reset pagination
+    this.currentPage = 0;
+    this.hasMore = true;
+    this.loading = false;
+
+    // Reset UI state
+    this.replyingTo = null;
+    this.showPreview = false;
+    this.resetMessageForm();
+
+    // Force Angular to detect changes
+    if (this.messagesContainer) {
+      this.messagesContainer.nativeElement.scrollTop = 0;
+    }
+  }
+
+  private setupWebSocketSubscriptions() {
+    if (!this.contact) return;
+
+    const phoneNumber = this.contact.phoneNumber;
+
+    // Subscribe to new messages
+    this.messageSubscription = this.websocketService
+      .subscribeToMessages(phoneNumber)
+      .subscribe((message) => {
+        if (message) {
+          console.log('Real-time message received:', message);
+          this.handleIncomingMessage(message);
+        }
+      });
+
+    // Subscribe to status updates
+    this.statusSubscription = this.websocketService
+      .subscribeToStatus(phoneNumber)
+      .subscribe((status) => {
+        if (status) {
+          console.log('Status update received:', status);
+          this.handleStatusUpdate(status);
+        }
+      });
+  }
+
+  private cleanupSubscriptions() {
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe();
+      this.messageSubscription = undefined;
+    }
+    if (this.statusSubscription) {
+      this.statusSubscription.unsubscribe();
+      this.statusSubscription = undefined;
+    }
+  }
+
+  private handleIncomingMessage(message: ChatMessage) {
+    // ✅ CRITICAL: Check if message belongs to current contact
+    if (!this.contact) {
+      console.log('No contact selected, ignoring message');
+      return;
+    }
+
+    const currentPhone = this.contact.phoneNumber;
+    const messagePhone = message.direction === 'RECEIVED' ? message.from : message.to;
+
+    // Only add message if it belongs to current contact
+    if (messagePhone !== currentPhone) {
+      console.log(`Message for ${messagePhone}, current contact is ${currentPhone}, ignoring`);
+      return;
+    }
+
+    // Check if message already exists
+    const exists = this.messages.some(m => m.messageId === message.messageId);
+    if (!exists) {
+      console.log('Adding new message to current chat');
+      this.messages = [...this.messages, message]; // ✅ Create new array reference
+      if (message.direction === 'RECEIVED') {
+        this.markCurrentChatAsRead();
+      }
+      this.playNotificationSound();
+    } else {
+      console.log('Message already exists, skipping');
+    }
+  }
+  private markCurrentChatAsRead() {
+    if (!this.contact) return;
+
+    this.messageService.markMessagesAsRead(this.contact.phoneNumber).subscribe({
+      next: () => console.log(`Auto-marked messages as read for ${this.contact?.phoneNumber}`),
+      error: (err) => console.error('Failed to auto-mark messages as read:', err)
+    });
+  }
+  private handleStatusUpdate(status: StatusDTO) {
+    const message = this.messages.find(m => m.messageId === status.messageId);
+    if (message) {
+      message.status = status.status;
+      // Force change detection
+      this.messages = [...this.messages];
+    }
+  }
+
+  private playNotificationSound() {
+    try {
+      const audio = new Audio('assets/notification.mp3');
+      audio.volume = 0.3;
+      audio.play().catch(err => console.log('Could not play sound:', err));
+    } catch (error) {
+      console.log('Notification sound not available');
+    }
+  }
+
   trackByIndex(index: number): number {
     return index;
   }
 
   trackByButtonIndex(index: number, item: ButtonDTO): string {
     return `${item.type}-${index}`;
+  }
+
+  trackByMessageId(index: number, message: ChatMessage): string {
+    return message.messageId;
   }
 
   loadTemplateNames() {
@@ -143,13 +326,13 @@ export class ChatWindowComponent implements OnInit, OnChanges {
             this.selectedTemplate = res;
             this.headerComponent = this.selectedTemplate?.components?.find(c => c.type === 'HEADER') || null;
             this.headerFormat = this.headerComponent?.format ?? null;
-            
+
             if (this.headerComponent?.example?.header_text) {
               this.templateHeaderVariables = new Array(this.headerComponent.example.header_text.length).fill('');
             } else {
               this.templateHeaderVariables = [];
             }
-            
+
             const bodyComponent = this.selectedTemplate?.components?.find(c => c.type === 'BODY');
             if (bodyComponent?.example?.body_text) {
               const variableCount = bodyComponent.example.body_text[0]?.length || 0;
@@ -157,26 +340,22 @@ export class ChatWindowComponent implements OnInit, OnChanges {
             } else {
               this.templateBodyVariables = [];
             }
-            
+
             const buttonComponent = this.selectedTemplate?.components?.find(c => c.type === 'BUTTONS');
             if (buttonComponent?.buttons) {
-              const dynamicButtons = buttonComponent.buttons.filter(b => 
-                (b.type === 'URL' && b.example && b.example.length > 0) || 
-                (b.type === 'OTP' && b.otp_type === 'ONE_TAP')
-              );
+              const dynamicButtons = buttonComponent.buttons.filter(b => (b.type === 'URL' && b.example && b.example.length > 0) || (b.type === 'OTP' && b.otp_type === 'ONE_TAP'));
               this.templateButtonValues = new Array(dynamicButtons.length).fill('');
-              this.oneTapParams = buttonComponent.buttons.map(b => 
-                b.type === 'OTP' && b.otp_type === 'ONE_TAP' 
-                  ? { autofillText: b.autofill_text || 'Autofill', packageName: b.package_name || '', signatureHash: b.signature_hash || '' }
-                  : { autofillText: '', packageName: '', signatureHash: '' }
-              );
+              this.oneTapParams = buttonComponent.buttons.map(b => b.type === 'OTP' && b.otp_type === 'ONE_TAP' ? { autofillText: b.autofill_text || 'Autofill', packageName: b.package_name || '', signatureHash: b.signature_hash || '' } : { autofillText: '', packageName: '', signatureHash: '' });
             } else {
               this.templateButtonValues = [];
               this.oneTapParams = [];
             }
-            
+
             const footerComponent = this.selectedTemplate?.components?.find(c => c.type === 'FOOTER');
             this.footerText = footerComponent?.text || null;
+
+            // ✅✅ أهم تعديل هنا: بنجهز للسكرول بعد ظهور المتغيرات ✅✅
+
           },
           error: (err) => {
             console.error('Error loading template:', err);
@@ -185,7 +364,9 @@ export class ChatWindowComponent implements OnInit, OnChanges {
         });
     }
   }
-
+  closeFormPanel() {
+    this.selectMessageType('text');
+  }
   resetMessageForm() {
     this.newMessage = '';
     this.messageType = 'text';
@@ -217,36 +398,52 @@ export class ChatWindowComponent implements OnInit, OnChanges {
     if (this.loading || !this.hasMore) return;
     this.loadMoreMessages();
   }
+  hasReplyContext(message: ChatMessage): boolean {
+    return !!(message.contextMessageId &&
+      message.contextMessageId.trim() &&
+      this.messages.some(m => m.messageId === message.contextMessageId));
+  }
 
   loadMessages() {
     if (!this.contact || this.loading) return;
 
     this.loading = true;
     const previousScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
+    const previousScrollTop = this.messagesContainer?.nativeElement.scrollTop || 0;
+    const currentContactPhone = this.contact.phoneNumber;
+    const isInitialLoad = this.currentPage === 0;
 
     this.messageService.getMessagesByContact(this.contact.phoneNumber, this.currentPage, this.pageSize).subscribe({
       next: (response: MessagePageResponse) => {
+        if (!this.contact || this.contact.phoneNumber !== currentContactPhone) {
+          console.log('Contact changed during load, ignoring response');
+          this.loading = false;
+          return;
+        }
+
         const newMessages = response.content;
 
-        if (this.currentPage === 0) {
+        if (isInitialLoad) {
           this.messages = [...newMessages].reverse();
+          setTimeout(() => this.scrollToBottom(), 0);
         } else {
           this.messages = [...newMessages.reverse(), ...this.messages];
+          // لما نحمل رسايل أقدم، بنحافظ على مكان السكرول
+          setTimeout(() => {
+            const newScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
+            this.messagesContainer.nativeElement.scrollTop = newScrollHeight - previousScrollHeight + previousScrollTop;
+          }, 50);
         }
 
         this.hasMore = !response.last && response.content.length > 0;
         this.loading = false;
 
-        setTimeout(() => {
-          if (this.currentPage === 0) {
-            this.scrollToBottom();
-            this.checkAndLoadMore();
-          } else {
-            const newScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
-            this.messagesContainer.nativeElement.scrollTop = newScrollHeight - previousScrollHeight;
-            this.checkAndLoadMore();
-          }
-        }, 100);
+        // ✅ شيلنا الـ setTimeout الكبير اللي كان هنا خالص
+
+        // بنتحقق لو محتاجين نحمل رسايل زيادة لو الشاشة لسه فاضية
+        if (isInitialLoad) {
+          this.checkAndLoadMore();
+        }
       },
       error: (err: unknown) => {
         console.error('Error loading messages:', err);
@@ -301,7 +498,7 @@ export class ChatWindowComponent implements OnInit, OnChanges {
       contextMessageId
     ).subscribe({
       next: (response: ChatMessage) => {
-        this.messages.push(response);
+        response.status = 'sent';
         this.resetMessageForm();
         this.replyingTo = null;
         setTimeout(() => this.scrollToBottom(), 100);
@@ -482,7 +679,7 @@ export class ChatWindowComponent implements OnInit, OnChanges {
 
     this.http.post<ChatMessage>('http://localhost:8080/message/send', payload, { headers }).subscribe({
       next: (response) => {
-        this.messages.push(response);
+        response.status = 'sent';
         this.resetMessageForm();
         this.replyingTo = null;
         setTimeout(() => this.scrollToBottom(), 100);
@@ -495,7 +692,9 @@ export class ChatWindowComponent implements OnInit, OnChanges {
   }
 
   onMessageClick(message: ChatMessage) {
+    console.log('Clicked message:', message);
     this.replyingTo = message;
+    setTimeout(() => this.scrollToBottom(), 0);
   }
 
   cancelReply() {
@@ -509,8 +708,12 @@ export class ChatWindowComponent implements OnInit, OnChanges {
   selectMessageType(type: 'text' | 'image' | 'video' | 'document' | 'template') {
     this.messageType = type;
     this.showMessageOptions = false;
-    this.resetMessageForm();
-    this.messageType = type;
+    if (type !== 'text') {
+      setTimeout(() => this.scrollToBottom(), 0);
+    }
+    if (type === 'text') {
+      this.resetMessageForm();
+    }
   }
 
   togglePreview() {
@@ -518,13 +721,12 @@ export class ChatWindowComponent implements OnInit, OnChanges {
   }
 
   clearChat() {
+    if (this.contact) {
+      this.websocketService.unsubscribeFromContact(this.contact.phoneNumber);
+    }
+    this.cleanupSubscriptions();
+    this.clearAllData();
     this.contact = null;
-    this.messages = [];
-    this.currentPage = 0;
-    this.hasMore = true;
-    this.replyingTo = null;
-    this.resetMessageForm();
-    this.showPreview = false;
     this.emitBackToSidebar();
   }
 
@@ -539,16 +741,15 @@ export class ChatWindowComponent implements OnInit, OnChanges {
   }
 
   getMessagePreview(message: ChatMessage): string {
+    if (!message) return 'Message';
     if (message.type === 'text' && message.textBody) {
       return this.truncateText(message.textBody);
     } else if (message.type === 'template' && message.templateBody) {
       return this.truncateText(message.templateBody);
     } else if (message.type === 'media' && message.caption) {
       return this.truncateText(message.caption);
-    } else if (message.type === 'media') {
-      return 'Media';
     }
-    return 'Message';
+    return 'Message'; // Default إذا كل حاجة فاضية
   }
 
   truncateText(text: string, maxLength: number = 50): string {

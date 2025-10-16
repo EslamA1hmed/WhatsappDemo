@@ -7,6 +7,7 @@ export interface Contact {
   phoneNumber: string;
   name: string;
   createdAt?: string;
+  unread: number;
   lastMessageTime?: string;
 }
 

@@ -38,10 +38,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .add-contact-btn:hover {
   background: rgba(0,0,0,0.05);
+}
+
+.add-contact-btn:active {
+  transform: scale(0.95);
 }
 
 .add-contact-form {
@@ -92,6 +98,8 @@
   font-weight: 500;
   transition: all 0.2s;
   font-size: 14px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .save-btn {
@@ -203,6 +211,8 @@
   font-weight: 500;
   font-size: 14px;
   transition: all 0.2s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .add-first-btn:hover {
@@ -218,19 +228,36 @@
   align-items: center;
   padding: 12px 16px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: background 0.15s ease;
   border-bottom: 1px solid #f0f2f5;
   position: relative;
   background: #ffffff;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent text selection on double click */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
+/* Faster hover response */
 .contact-item:hover {
   background: #f5f6f6;
+}
+
+/* Visual feedback on click */
+.contact-item:active {
+  background: #e9edef;
+  transition: background 0.05s ease;
 }
 
 .contact-item.active {
   background: #f0f2f5;
   border-left: none;
+}
+
+.contact-item.active:hover {
+  background: #e9edef;
 }
 
 .contact-avatar {
@@ -246,6 +273,7 @@
   font-size: 18px;
   flex-shrink: 0;
   margin-right: 15px;
+  pointer-events: none; /* Prevent click events on avatar */
 }
 
 .contact-info {
@@ -253,6 +281,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  pointer-events: none; /* Let parent handle clicks */
 }
 
 .contact-header {
@@ -273,6 +302,10 @@
   margin-right: 8px;
 }
 
+.contact-item.active .contact-name {
+  font-weight: 500;
+}
+
 .last-message-time {
   font-size: 12px;
   color: #667781;
@@ -282,6 +315,7 @@
 
 .contact-item.active .last-message-time {
   color: #00a884;
+  font-weight: 500;
 }
 
 .contact-footer {
@@ -316,6 +350,21 @@
   min-width: 20px;
   text-align: center;
   flex-shrink: 0;
+  animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .delete-btn {
@@ -330,6 +379,10 @@
   transition: all 0.2s;
   margin-left: 8px;
   font-weight: 500;
+  pointer-events: auto; /* Enable click events */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 10;
 }
 
 .contact-item:hover .delete-btn {
@@ -338,6 +391,7 @@
 
 .delete-btn:hover {
   background: #d93025;
+  transform: scale(1.05);
 }
 
 .delete-btn:active {
@@ -383,6 +437,30 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ripple effect on click */
+.contact-item {
+  overflow: hidden;
+  position: relative;
+}
+
+.contact-item::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 168, 132, 0.15);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.contact-item:active::after {
+  width: 200%;
+  height: 200%;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .sidebar-header {
@@ -395,6 +473,8 @@
   
   .contact-item {
     padding: 10px 12px;
+    /* Better touch target */
+    min-height: 60px;
   }
   
   .contact-avatar {
@@ -410,5 +490,14 @@
   
   .last-message {
     font-size: 12.5px;
+  }
+  
+  /* Always show delete button on mobile */
+  .delete-btn {
+    opacity: 0.7;
+  }
+  
+  .delete-btn:active {
+    opacity: 1;
   }
 }

@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 
 import { LoginComponent } from './app/pages/login/login.component';
 import { SignupComponent } from './app/pages/signup/signup.component';
-import { DashboardComponent } from './app/pages/dashboard/dashboard.component';
+import { DashboardComponent } from './app/pages/dashboard/sidebar.component';
 import { SendMessageComponent } from './app/pages/send-message/send-message.component';
 import { TemplateListComponent } from './app/pages/templates/template-list.component';
 import { CreateTemplateComponent } from './app/pages/templates/create-template/create-template.component';

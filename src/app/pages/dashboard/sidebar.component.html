@@ -29,7 +29,7 @@
       <app-messages></app-messages>
     </div>
 
-    <!-- Chat Tab -->
+    <!-- Chat Tab - ✅ Use ngIf to completely destroy/recreate component -->
     <div *ngIf="activeTab === 'chat'" class="tab-content chat-tab">
       <app-chat></app-chat>
     </div>

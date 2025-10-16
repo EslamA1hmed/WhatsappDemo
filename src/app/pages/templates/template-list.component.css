@@ -168,3 +168,39 @@
   color: #c0392b;
   margin-top: 10px;
 }
+/* ... (ضيف الأكواد دي في آخر الملف) ... */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  color: #555;
+  text-align: center;
+  font-size: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 5px solid #f3f3f3; /* لون رمادي فاتح */
+  border-top: 5px solid #075e54; /* لون أخضر واتساب */
+  border-radius: 50%;
+  margin-bottom: 15px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: #777;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 20px;
+}
