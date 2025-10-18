@@ -6,6 +6,7 @@ import { ChatMessageService, ChatMessage, MessagePageResponse } from '../../../s
 import { Contact } from '../../../services/contact.service';
 import { AuthService } from '../../../services/auth.service';
 import { WebSocketService } from '../../../services/websocket.service';
+import { MediaService } from '../../../services/MediaService';
 import { debounceTime } from 'rxjs/operators';
 import { Subject, Subscription } from 'rxjs';
 
@@ -28,6 +29,7 @@ interface ComponentDTO {
   add_security_recommendation?: boolean;
   code_expiration_minutes?: number;
 }
+
 export interface StatusDTO {
   status: string;
   messageId: string;
@@ -52,10 +54,12 @@ interface ButtonDTO {
   templateUrl: './chat-window.component.html',
   styleUrls: ['./chat-window.component.css']
 })
-export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy,AfterViewInit {
+export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit {
   @Input() contact: Contact | null = null;
   @Output() backToSidebar = new EventEmitter<void>();
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  
   messages: ChatMessage[] = [];
   loading = false;
   currentPage = 0;
@@ -68,7 +72,6 @@ export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy,AfterVi
   @ViewChild('formPanelContainer') formPanelContainer!: ElementRef;
   private formPanelObserver?: MutationObserver;
 
-  // WebSocket subscriptions
   private messageSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
@@ -82,6 +85,13 @@ export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy,AfterVi
   videoCaption = '';
   docLink = '';
   docFilename = '';
+
+  // ✅ Local file upload properties
+  selectedFile: File | null = null;
+  localPreviewUrl: string = '';
+  isUploading = false;
+  uploadProgress = 0;
+  uploadedMediaId: string = '';
 
   templateNames: string[] = [];
   selectedTemplateName = '';
@@ -99,7 +109,8 @@ export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy,AfterVi
     private messageService: ChatMessageService,
     private http: HttpClient,
     private authService: AuthService,
-    private websocketService: WebSocketService
+    private websocketService: WebSocketService,
+    private mediaService: MediaService
   ) {
     this.scrollSubject.pipe(debounceTime(100)).subscribe(() => {
       this.handleScroll();
@@ -111,45 +122,35 @@ export class ChatWindowComponent implements OnInit, OnChanges, OnDestroy,AfterVi
       this.initializeChat();
     }
   }
-ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
-    // بنشغل الحارس هنا مرة واحدة فقط بعد ما الصفحة تترسم
+
+  ngAfterViewInit() {
     if (this.formPanelContainer) {
       this.setupFormPanelObserver();
     }
   }
+
   private setupFormPanelObserver() {
     const targetNode = this.formPanelContainer.nativeElement;
-
-    // دي الدالة اللي هتشتغل كل ما الحارس يشوف تغيير
     const callback = (mutationsList: MutationRecord[], observer: MutationObserver) => {
-      // أي تغيير بيحصل في حجم الفورم، بنعمل سكرول لتحت
       setTimeout(() => this.scrollToBottom(), 0);
     };
-
     this.formPanelObserver = new MutationObserver(callback);
-
-    // بنقول للحارس يراقب أي إضافة أو حذف للعناصر جوه الفورم
     const config = { childList: true, subtree: true };
-
     this.formPanelObserver.observe(targetNode, config);
   }
+
   ngOnChanges(changes: SimpleChanges) {
     if (changes['contact']) {
       const previousContact = changes['contact'].previousValue as Contact;
       const currentContact = changes['contact'].currentValue as Contact;
 
-      // Unsubscribe from previous contact
       if (previousContact) {
         this.websocketService.unsubscribeFromContact(previousContact.phoneNumber);
         this.cleanupSubscriptions();
       }
 
-      // Initialize new contact
       if (currentContact) {
-        // ✅ CRITICAL: Clear everything immediately
         this.clearAllData();
-
-        // Small delay to ensure DOM is ready
         setTimeout(() => {
           this.initializeChat();
         }, 50);
@@ -165,37 +166,26 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
     if (this.formPanelObserver) {
       this.formPanelObserver.disconnect();
     }
+    this.cleanupLocalPreview();
   }
 
-  // ✅ NEW: Initialize chat for a contact
   private initializeChat() {
     if (!this.contact) return;
-
     console.log('Initializing chat for:', this.contact.phoneNumber);
-
     this.loadMessages();
     this.loadTemplateNames();
     this.setupWebSocketSubscriptions();
   }
 
-  // ✅ NEW: Clear all data when switching contacts
   private clearAllData() {
     console.log('Clearing all data...');
-
-    // Clear messages array completely
     this.messages = [];
-
-    // Reset pagination
     this.currentPage = 0;
     this.hasMore = true;
     this.loading = false;
-
-    // Reset UI state
     this.replyingTo = null;
     this.showPreview = false;
     this.resetMessageForm();
-
-    // Force Angular to detect changes
     if (this.messagesContainer) {
       this.messagesContainer.nativeElement.scrollTop = 0;
     }
@@ -203,10 +193,8 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
 
   private setupWebSocketSubscriptions() {
     if (!this.contact) return;
-
     const phoneNumber = this.contact.phoneNumber;
 
-    // Subscribe to new messages
     this.messageSubscription = this.websocketService
       .subscribeToMessages(phoneNumber)
       .subscribe((message) => {
@@ -216,7 +204,6 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
         }
       });
 
-    // Subscribe to status updates
     this.statusSubscription = this.websocketService
       .subscribeToStatus(phoneNumber)
       .subscribe((status) => {
@@ -238,48 +225,79 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
     }
   }
 
-  private handleIncomingMessage(message: ChatMessage) {
-    // ✅ CRITICAL: Check if message belongs to current contact
+ // ✅ استبدل الدالة الحالية بهذه النسخة المحسّنة
+private handleIncomingMessage(message: ChatMessage) {
     if (!this.contact) {
-      console.log('No contact selected, ignoring message');
-      return;
+        return;
     }
 
     const currentPhone = this.contact.phoneNumber;
     const messagePhone = message.direction === 'RECEIVED' ? message.from : message.to;
 
-    // Only add message if it belongs to current contact
     if (messagePhone !== currentPhone) {
-      console.log(`Message for ${messagePhone}, current contact is ${currentPhone}, ignoring`);
-      return;
+        return;
     }
 
-    // Check if message already exists
-    const exists = this.messages.some(m => m.messageId === message.messageId);
-    if (!exists) {
-      console.log('Adding new message to current chat');
-      this.messages = [...this.messages, message]; // ✅ Create new array reference
-      if (message.direction === 'RECEIVED') {
-        this.markCurrentChatAsRead();
-      }
-      this.playNotificationSound();
+    // -- الخطوة 1: ابحث عن الرسالة وقم بتحديثها أو إضافتها --
+    const existingMessageIndex = this.messages.findIndex(m => m.messageId === message.messageId);
+    let messageToProcess: ChatMessage;
+
+    if (existingMessageIndex > -1) {
+        // إذا كانت الرسالة موجودة، قم بدمج البيانات الجديدة (هذا مهم للرسائل الصادرة)
+        console.log('Updating existing message with data from WebSocket:', message);
+        this.messages[existingMessageIndex] = { ...this.messages[existingMessageIndex], ...message };
+        messageToProcess = this.messages[existingMessageIndex];
     } else {
-      console.log('Message already exists, skipping');
+        // إذا كانت رسالة جديدة، قم بإضافتها
+        console.log('Adding new message from WebSocket');
+        messageToProcess = message;
+        this.messages.push(messageToProcess);
+        if (message.direction === 'RECEIVED') {
+            this.markCurrentChatAsRead();
+            this.playNotificationSound();
+        }
+        setTimeout(() => this.scrollToBottom(), 50);
     }
-  }
+    
+    // -- الخطوة 2 (الأهم): قم بتشغيل تحميل الصورة للرسالة الجديدة/المحدثة --
+    if (messageToProcess.mediaId && !messageToProcess.mediaUrl && (messageToProcess.type === 'image' || messageToProcess.type === 'video')) {
+        console.log(`Triggering lazy-load for real-time message ID: ${messageToProcess.messageId}`);
+        
+        this.mediaService.downloadMediaAsBlob(messageToProcess.mediaId).subscribe({
+            next: (blobUrl) => {
+                // ابحث عن الرسالة مرة أخرى للتأكد من أنها لا تزال موجودة
+                const msg = this.messages.find(m => m.messageId === messageToProcess.messageId);
+                if (msg) {
+                    msg.mediaUrl = blobUrl; // ✅ هنا يتم تحميل الصورة الكاملة
+                    this.messages = [...this.messages]; // لتحديث الواجهة
+                }
+            },
+            error: (err) => {
+                console.error('Failed to lazy-load media for real-time message:', err);
+                const msg = this.messages.find(m => m.messageId === messageToProcess.messageId);
+                if (msg) {
+                    // يمكنك إضافة خاصية للخطأ إذا أردت
+                }
+            }
+        });
+    }
+
+    // قم بتحديث القائمة لتفعيل التغييرات في الواجهة
+    this.messages = [...this.messages];
+}
+
   private markCurrentChatAsRead() {
     if (!this.contact) return;
-
     this.messageService.markMessagesAsRead(this.contact.phoneNumber).subscribe({
       next: () => console.log(`Auto-marked messages as read for ${this.contact?.phoneNumber}`),
       error: (err) => console.error('Failed to auto-mark messages as read:', err)
     });
   }
+
   private handleStatusUpdate(status: StatusDTO) {
     const message = this.messages.find(m => m.messageId === status.messageId);
     if (message) {
       message.status = status.status;
-      // Force change detection
       this.messages = [...this.messages];
     }
   }
@@ -353,9 +371,6 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
 
             const footerComponent = this.selectedTemplate?.components?.find(c => c.type === 'FOOTER');
             this.footerText = footerComponent?.text || null;
-
-            // ✅✅ أهم تعديل هنا: بنجهز للسكرول بعد ظهور المتغيرات ✅✅
-
           },
           error: (err) => {
             console.error('Error loading template:', err);
@@ -364,9 +379,11 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
         });
     }
   }
+
   closeFormPanel() {
     this.selectMessageType('text');
   }
+
   resetMessageForm() {
     this.newMessage = '';
     this.messageType = 'text';
@@ -384,6 +401,67 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
     this.templateButtonValues = [];
     this.oneTapParams = [];
     this.showMessageOptions = false;
+    this.cleanupLocalPreview();
+  }
+
+  // ✅ File upload methods
+  triggerFileInput() {
+    if (this.fileInput) {
+      this.fileInput.nativeElement.click();
+    }
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    this.cleanupLocalPreview();
+
+    // Validate file type
+    if (!this.mediaService.validateFileType(file, this.messageType as any)) {
+      alert(`Invalid file type for ${this.messageType}. Please select a valid file.`);
+      input.value = '';
+      return;
+    }
+
+    // Validate file size
+    if (!this.mediaService.validateFileSize(file)) {
+      alert('File size exceeds 16MB limit');
+      input.value = '';
+      return;
+    }
+
+    this.selectedFile = file;
+    this.localPreviewUrl = this.mediaService.createPreviewUrl(file);
+    
+    // Auto-fill filename for documents
+    if (this.messageType === 'document') {
+      this.docFilename = file.name;
+    }
+
+    setTimeout(() => this.scrollToBottom(), 100);
+    input.value = '';
+  }
+
+  private cleanupLocalPreview() {
+    if (this.localPreviewUrl) {
+      this.mediaService.revokePreviewUrl(this.localPreviewUrl);
+      this.localPreviewUrl = '';
+    }
+    this.selectedFile = null;
+    this.isUploading = false;
+    this.uploadProgress = 0;
+    this.uploadedMediaId = '';
+  }
+
+  removeSelectedFile() {
+    this.cleanupLocalPreview();
+  }
+
+  getFileSize(): string {
+    if (!this.selectedFile) return '';
+    return this.mediaService.formatFileSize(this.selectedFile.size);
   }
 
   onMessagesScroll(event: Event) {
@@ -398,60 +476,87 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
     if (this.loading || !this.hasMore) return;
     this.loadMoreMessages();
   }
+
   hasReplyContext(message: ChatMessage): boolean {
     return !!(message.contextMessageId &&
       message.contextMessageId.trim() &&
       this.messages.some(m => m.messageId === message.contextMessageId));
   }
 
-  loadMessages() {
-    if (!this.contact || this.loading) return;
+ loadMessages() {
+  if (!this.contact || this.loading) return;
 
-    this.loading = true;
-    const previousScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
-    const previousScrollTop = this.messagesContainer?.nativeElement.scrollTop || 0;
-    const currentContactPhone = this.contact.phoneNumber;
-    const isInitialLoad = this.currentPage === 0;
+  this.loading = true;
+  const previousScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
+  const previousScrollTop = this.messagesContainer?.nativeElement.scrollTop || 0;
+  const currentContactPhone = this.contact.phoneNumber;
+  const isInitialLoad = this.currentPage === 0;
 
-    this.messageService.getMessagesByContact(this.contact.phoneNumber, this.currentPage, this.pageSize).subscribe({
-      next: (response: MessagePageResponse) => {
-        if (!this.contact || this.contact.phoneNumber !== currentContactPhone) {
-          console.log('Contact changed during load, ignoring response');
-          this.loading = false;
-          return;
-        }
-
-        const newMessages = response.content;
-
-        if (isInitialLoad) {
-          this.messages = [...newMessages].reverse();
-          setTimeout(() => this.scrollToBottom(), 0);
-        } else {
-          this.messages = [...newMessages.reverse(), ...this.messages];
-          // لما نحمل رسايل أقدم، بنحافظ على مكان السكرول
-          setTimeout(() => {
-            const newScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
-            this.messagesContainer.nativeElement.scrollTop = newScrollHeight - previousScrollHeight + previousScrollTop;
-          }, 50);
-        }
-
-        this.hasMore = !response.last && response.content.length > 0;
+  this.messageService.getMessagesByContact(this.contact.phoneNumber, this.currentPage, this.pageSize).subscribe({
+    next: (response: MessagePageResponse) => {
+      if (!this.contact || this.contact.phoneNumber !== currentContactPhone) {
+        console.log('Contact changed during load, ignoring response');
         this.loading = false;
-
-        // ✅ شيلنا الـ setTimeout الكبير اللي كان هنا خالص
-
-        // بنتحقق لو محتاجين نحمل رسايل زيادة لو الشاشة لسه فاضية
-        if (isInitialLoad) {
-          this.checkAndLoadMore();
-        }
-      },
-      error: (err: unknown) => {
-        console.error('Error loading messages:', err);
-        this.loading = false;
-        alert('Failed to load messages');
+        return;
       }
-    });
-  }
+
+      const newMessages = response.content;
+
+      // ✅ Mark messages with mediaId as loading
+      newMessages.forEach(message => {
+        if (message.mediaId && !message.mediaUrl) {
+          message.mediaLoading = true; // ✅ Add loading flag
+        }
+      });
+
+      if (isInitialLoad) {
+        this.messages = [...newMessages].reverse();
+        setTimeout(() => this.scrollToBottom(), 0);
+      } else {
+        this.messages = [...newMessages.reverse(), ...this.messages];
+        setTimeout(() => {
+          const newScrollHeight = this.messagesContainer?.nativeElement.scrollHeight || 0;
+          this.messagesContainer.nativeElement.scrollTop = newScrollHeight - previousScrollHeight + previousScrollTop;
+        }, 50);
+      }
+
+      this.hasMore = !response.last && response.content.length > 0;
+      this.loading = false;
+
+      // ✅ Load media URLs asynchronously (after messages are displayed)
+      newMessages.forEach(message => {
+        if (message.mediaId && !message.mediaUrl) {
+          this.mediaService.downloadMediaAsBlob(message.mediaId).subscribe({
+            next: (blobUrl) => {
+              const msg = this.messages.find(m => m.messageId === message.messageId);
+              if (msg) {
+                msg.mediaUrl = blobUrl;
+                msg.mediaLoading = false; // ✅ Remove loading flag
+                this.messages = [...this.messages]; // Force update
+              }
+            },
+            error: (err) => {
+              console.error('Failed to load media:', err);
+              const msg = this.messages.find(m => m.messageId === message.messageId);
+              if (msg) {
+                msg.mediaLoading = false;
+              }
+            }
+          });
+        }
+      });
+
+      if (isInitialLoad) {
+        this.checkAndLoadMore();
+      }
+    },
+    error: (err: unknown) => {
+      console.error('Error loading messages:', err);
+      this.loading = false;
+      alert('Failed to load messages');
+    }
+  });
+}
 
   checkAndLoadMore() {
     if (!this.messagesContainer || this.loading || !this.hasMore) return;
@@ -511,74 +616,129 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
   }
 
   sendImageMessage() {
-    if (!this.imageLink || !this.contact) {
-      alert('Please provide an image link');
-      return;
+    if (!this.contact) return;
+
+    // ✅ Check if we have uploaded media ID or need to upload
+    if (this.uploadedMediaId) {
+      this.sendMediaWithId('image', this.uploadedMediaId, this.imageCaption);
+    } else if (this.selectedFile) {
+      this.uploadAndSendMedia('image');
+    } else if (this.imageLink) {
+      this.sendMediaWithLink('image', this.imageLink, this.imageCaption);
+    } else {
+      alert('Please select a file or provide an image link');
     }
-
-    const payload: any = {
-      messaging_product: 'whatsapp',
-      to: this.contact.phoneNumber,
-      type: 'image',
-      image: { link: this.imageLink }
-    };
-
-    if (this.imageCaption) {
-      payload.image.caption = this.imageCaption;
-    }
-
-    if (this.replyingTo) {
-      payload.context = { message_id: this.replyingTo.messageId };
-    }
-
-    this.sendCustomMessage(payload);
   }
 
   sendVideoMessage() {
-    if (!this.videoLink || !this.contact) {
-      alert('Please provide a video link');
-      return;
+    if (!this.contact) return;
+
+    if (this.uploadedMediaId) {
+      this.sendMediaWithId('video', this.uploadedMediaId, this.videoCaption);
+    } else if (this.selectedFile) {
+      this.uploadAndSendMedia('video');
+    } else if (this.videoLink) {
+      this.sendMediaWithLink('video', this.videoLink, this.videoCaption);
+    } else {
+      alert('Please select a file or provide a video link');
     }
-
-    const payload: any = {
-      messaging_product: 'whatsapp',
-      to: this.contact.phoneNumber,
-      type: 'video',
-      video: { link: this.videoLink }
-    };
-
-    if (this.videoCaption) {
-      payload.video.caption = this.videoCaption;
-    }
-
-    if (this.replyingTo) {
-      payload.context = { message_id: this.replyingTo.messageId };
-    }
-
-    this.sendCustomMessage(payload);
   }
 
   sendDocumentMessage() {
-    if (!this.docLink || !this.contact) {
-      alert('Please provide a document link');
-      return;
+    if (!this.contact) return;
+
+    if (this.uploadedMediaId) {
+      this.sendMediaWithId('document', this.uploadedMediaId, this.docFilename);
+    } else if (this.selectedFile) {
+      this.uploadAndSendMedia('document');
+    } else if (this.docLink) {
+      this.sendMediaWithLink('document', this.docLink, this.docFilename);
+    } else {
+      alert('Please select a file or provide a document link');
     }
+  }
+
+  // ✅ Upload file and send with media ID
+  private uploadAndSendMedia(type: 'image' | 'video' | 'document') {
+    if (!this.selectedFile || !this.contact) return;
+
+    this.isUploading = true;
+    this.uploadProgress = 0;
+
+    this.mediaService.uploadMedia(this.selectedFile, type).subscribe({
+      next: (response) => {
+        this.uploadProgress = 100;
+        this.uploadedMediaId = response.id;
+        
+        console.log('✅ Media uploaded successfully:', response);
+        console.log('📦 Media ID:', response.id);
+        
+        const caption = type === 'image' ? this.imageCaption : 
+                       type === 'video' ? this.videoCaption : 
+                       this.docFilename;
+        
+        // ✅ Send using media ID
+        this.sendMediaWithId(type, response.id, caption);
+      },
+      error: (err) => {
+        this.isUploading = false;
+        alert(`Failed to upload ${type}: ${err.error?.message || err.message}`);
+        console.error(err);
+      }
+    });
+  }
+
+  // ✅ Send media using media ID (from upload)
+  private sendMediaWithId(type: 'image' | 'video' | 'document', mediaId: string, caption?: string) {
+    if (!this.contact) return;
 
     const payload: any = {
       messaging_product: 'whatsapp',
       to: this.contact.phoneNumber,
-      type: 'document',
-      document: { link: this.docLink }
+      type: type,
+      [type]: { id: mediaId }
     };
 
-    if (this.docFilename) {
-      payload.document.filename = this.docFilename;
+    if (caption && (type === 'image' || type === 'video')) {
+      payload[type].caption = caption;
+    }
+
+    if (type === 'document' && caption) {
+      payload.document.filename = caption;
     }
 
     if (this.replyingTo) {
       payload.context = { message_id: this.replyingTo.messageId };
     }
 
+    console.log('📤 Sending media with ID:', payload);
+    this.sendCustomMessage(payload);
+  }
+
+  // ✅ Send media using direct link
+  private sendMediaWithLink(type: 'image' | 'video' | 'document', link: string, caption?: string) {
+    if (!this.contact) return;
+
+    const payload: any = {
+      messaging_product: 'whatsapp',
+      to: this.contact.phoneNumber,
+      type: type,
+      [type]: { link: link }
+    };
+
+    if (caption && (type === 'image' || type === 'video')) {
+      payload[type].caption = caption;
+    }
+
+    if (type === 'document' && caption) {
+      payload.document.filename = caption;
+    }
+
+    if (this.replyingTo) {
+      payload.context = { message_id: this.replyingTo.messageId };
+    }
+
+    console.log('📤 Sending media with link:', payload);
     this.sendCustomMessage(payload);
   }
 
@@ -749,7 +909,7 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
     } else if (message.type === 'media' && message.caption) {
       return this.truncateText(message.caption);
     }
-    return 'Message'; // Default إذا كل حاجة فاضية
+    return 'Message';
   }
 
   truncateText(text: string, maxLength: number = 50): string {
@@ -819,9 +979,9 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
   hasPreviewContent(): boolean {
     return !!(
       (this.messageType === 'text' && this.newMessage) ||
-      (this.messageType === 'image' && this.imageLink) ||
-      (this.messageType === 'video' && this.videoLink) ||
-      (this.messageType === 'document' && this.docLink) ||
+      (this.messageType === 'image' && (this.imageLink || this.selectedFile)) ||
+      (this.messageType === 'video' && (this.videoLink || this.selectedFile)) ||
+      (this.messageType === 'document' && (this.docLink || this.selectedFile)) ||
       (this.messageType === 'template' && this.selectedTemplate)
     );
   }
@@ -883,5 +1043,18 @@ ngAfterViewInit() { // ✅✅ ده الاسم الصحيح
 
   getMediaFileName(url: string): string {
     return url.split('/').pop() || 'Document';
+  }
+
+  getPreviewUrl(): string {
+    return this.localPreviewUrl || 
+           (this.messageType === 'image' ? this.imageLink : 
+            this.messageType === 'video' ? this.videoLink : 
+            this.docLink);
+  }
+
+  getPreviewCaption(): string {
+    return this.messageType === 'image' ? this.imageCaption :
+           this.messageType === 'video' ? this.videoCaption :
+           this.docFilename;
   }
 }

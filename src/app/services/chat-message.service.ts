@@ -19,6 +19,10 @@ export interface ChatMessage {
   mediaId?: string;
   mimeType?: string;
   mediaUrl?: string;
+  mediaLoading?: boolean;
+  thumbnail?: string; // سيحتوي على Base64 string
+  width?: number;
+  height?: number;
   caption?: string;
   filename?: string;
   contextMessageId?: string;

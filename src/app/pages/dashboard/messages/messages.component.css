@@ -467,3 +467,47 @@
     max-width: 200px;
   }
 }
+/* ================================================ */
+/* ✅ STYLES FOR BLURRY IMAGE PLACEHOLDER */
+/* ================================================ */
+
+/* حاوية الوسائط التي تحافظ على نسبة أبعاد الصورة */
+.media-container {
+    position: relative;
+    width: 100%; /* تأخذ عرض الـ media-preview بالكامل */
+    background-color: #f0f2f5;
+    border-radius: 10px; /* نفس الـ border-radius الخاص بـ .media-preview */
+    overflow: hidden;
+    display: block;
+}
+
+/* الصورة المصغرة (Thumbnail) التي تعمل كـ Placeholder */
+.media-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(20px); /* يمكنك زيادة الضبابية هنا */
+    transform: scale(1.1);
+    opacity: 1;
+    transition: opacity 0.4s ease-in-out;
+}
+
+/* الصورة الحقيقية عالية الجودة */
+.media-full-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+}
+
+/* عندما يتم تحميل الصورة الحقيقية، يتم إضافة هذا الكلاس */
+.media-full-image.loaded {
+    opacity: 1;
+}

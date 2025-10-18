@@ -1,14 +1,10 @@
 <div class="whatsapp-messages">
   <!-- View Toggle Tabs -->
   <div class="view-toggle">
-    <button class="toggle-btn" 
-            [class.active]="activeView === 'messages'"
-            (click)="setView('messages')">
+    <button class="toggle-btn" [class.active]="activeView === 'messages'" (click)="setView('messages')">
       📱 Messages
     </button>
-    <button class="toggle-btn" 
-            [class.active]="activeView === 'statistics'"
-            (click)="setView('statistics')">
+    <button class="toggle-btn" [class.active]="activeView === 'statistics'" (click)="setView('statistics')">
       📊 Statistics
     </button>
   </div>
@@ -35,9 +31,7 @@
     </div>
 
     <div class="messages-grid" *ngIf="!loading && !error && messages.length > 0">
-      <div class="message-item" 
-           *ngFor="let message of messages"
-           [ngClass]="'status-' + message.status">
+      <div class="message-item" *ngFor="let message of messages" [ngClass]="'status-' + message.status">
         <!-- Message Header -->
         <div class="message-header">
           <div class="recipient-info">
@@ -73,38 +67,28 @@
           </div>
 
           <!-- Regular Text Message -->
-          <div class="message-content" 
-               *ngIf="message.textBody && !message.templateName && !message.hasMedia"
-               [ngClass]="{'rtl': isRTL(message.textBody)}">
+          <div class="message-content" *ngIf="message.textBody && !message.templateName && !message.hasMedia"
+            [ngClass]="{'rtl': isRTL(message.textBody)}">
             {{ message.textBody }}
           </div>
 
           <!-- Media Content - Image -->
-          <div class="media-preview" *ngIf="message.type === 'image'">
-            <div *ngIf="message.isLoadingMedia" class="media-loading">
-              ⏳ Loading image...
-            </div>
-            <ng-container *ngIf="message.mediaUrl && !message.isLoadingMedia">
-              <img [src]="message.mediaUrl" 
-                   alt="Image" 
-                   class="media-item"
-                   [style.display]="message.mediaLoaded ? 'block' : 'none'"
-                   (load)="onMediaLoad(message)"
-                   (error)="onMediaError(message)">
-              <div *ngIf="!message.mediaLoaded && !message.mediaError" 
-                   class="media-loading">
-                ⏳ Loading image...
-              </div>
-            </ng-container>
-            <div *ngIf="message.mediaError || (!message.mediaUrl && !message.mediaId)" class="media-error">
-              ⚠️ Unable to load image
+          <div class="media-preview" *ngIf="message.type === 'image' && message.mediaId">
+
+            <div class="media-container"
+              [style.aspect-ratio]="(message.width && message.height) ? (message.width + '/' + message.height) : '16/9'">
+
+              <img [src]="message.thumbnail" alt="Loading image" class="media-placeholder"
+                *ngIf="message.thumbnail && !message.mediaUrl">
+
+              <img [src]="message.mediaUrl" alt="Image" class="media-full-image" *ngIf="message.mediaUrl"
+                [class.loaded]="!!message.mediaUrl" (error)="onMediaError(message)">
             </div>
           </div>
 
           <!-- Caption for Image -->
-          <div *ngIf="message.caption && message.type === 'image'" 
-               class="caption" 
-               [ngClass]="{'rtl': isRTL(message.caption)}">
+          <div *ngIf="message.caption && message.type === 'image'" class="caption"
+            [ngClass]="{'rtl': isRTL(message.caption)}">
             {{ message.caption }}
           </div>
 
@@ -114,15 +98,11 @@
               ⏳ Loading video...
             </div>
             <ng-container *ngIf="message.mediaUrl && !message.isLoadingMedia">
-              <video [src]="message.mediaUrl" 
-                     controls 
-                     class="media-item"
-                     [style.display]="message.mediaLoaded ? 'block' : 'none'"
-                     (loadeddata)="onMediaLoad(message)"
-                     (error)="onMediaError(message)">
+              <video [src]="message.mediaUrl" controls class="media-item"
+                [style.display]="message.mediaLoaded ? 'block' : 'none'" (loadeddata)="onMediaLoad(message)"
+                (error)="onMediaError(message)">
               </video>
-              <div *ngIf="!message.mediaLoaded && !message.mediaError" 
-                   class="media-loading">
+              <div *ngIf="!message.mediaLoaded && !message.mediaError" class="media-loading">
                 ⏳ Loading video...
               </div>
             </ng-container>
@@ -132,9 +112,8 @@
           </div>
 
           <!-- Caption for Video -->
-          <div *ngIf="message.caption && message.type === 'video'" 
-               class="caption" 
-               [ngClass]="{'rtl': isRTL(message.caption)}">
+          <div *ngIf="message.caption && message.type === 'video'" class="caption"
+            [ngClass]="{'rtl': isRTL(message.caption)}">
             {{ message.caption }}
           </div>
 
@@ -148,17 +127,15 @@
           </div>
 
           <!-- Caption for Document -->
-          <div *ngIf="message.caption && message.type === 'document'" 
-               class="caption" 
-               [ngClass]="{'rtl': isRTL(message.caption)}">
+          <div *ngIf="message.caption && message.type === 'document'" class="caption"
+            [ngClass]="{'rtl': isRTL(message.caption)}">
             {{ message.caption }}
           </div>
 
           <!-- Buttons -->
           <div class="message-buttons" *ngIf="message.hasButtons">
-            <div *ngFor="let button of message.buttons" 
-                 class="button-preview" 
-                 [ngClass]="{'rtl-button': isRTL(button.text)}">
+            <div *ngFor="let button of message.buttons" class="button-preview"
+              [ngClass]="{'rtl-button': isRTL(button.text)}">
               {{ button.text }}
             </div>
           </div>

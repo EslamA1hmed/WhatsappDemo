@@ -2,7 +2,7 @@
   <!-- Left Side: Chat Window -->
   <div class="chat-main">
     <div class="chat-window">
-      
+
       <!-- Chat Header -->
       <div class="chat-header">
         <button class="back-btn" (click)="emitBackToSidebar()" *ngIf="isMobile()"
@@ -49,12 +49,27 @@
           <div class="message-bubble" [class.has-media]="message.mediaUrl"
             [class.clickable]="message.type !== 'system' && replyingTo !== message">
             <!-- Media -->
-            <div class="message-media" *ngIf="message.mediaUrl">
-              <img *ngIf="message.type === 'image'" [src]="message.mediaUrl" alt="Image" class="media-image">
-              <video *ngIf="message.type === 'video'" [src]="message.mediaUrl" controls class="media-video">
-              </video>
+            <!-- Media -->
+            <div class="message-media" *ngIf="message.type === 'image' && message.mediaId">
+
+              <div class="media-container"
+                [style.aspect-ratio]="(message.width && message.height) ? (message.width + '/' + message.height) : '1/1'">
+
+                <img [src]="message.thumbnail" alt="Loading image" class="media-placeholder"
+                  *ngIf="message.thumbnail && !message.mediaUrl">
+
+                <img [src]="message.mediaUrl" alt="Image" class="media-full-image" *ngIf="message.mediaUrl"
+                  [class.loaded]="!!message.mediaUrl">
+              </div>
             </div>
 
+            <div class="message-media" *ngIf="message.type === 'video' && message.mediaId">
+              <video *ngIf="message.mediaUrl" [src]="message.mediaUrl" controls class="media-video"></video>
+              <div *ngIf="!message.mediaUrl" class="media-loading-placeholder">
+                <div class="media-spinner"></div>
+                <span>Loading video...</span>
+              </div>
+            </div>
             <!-- Text or Template Content -->
             <div class="message-text" *ngIf="message.type === 'text' && message.textBody"
               [class.rtl]="isRTL(message.textBody)">
@@ -109,115 +124,206 @@
       </div>
 
       <div #formPanelContainer>
-      <div class="message-type-panel" *ngIf="messageType !== 'text'">
-        <!-- Image Fields -->
-        <div *ngIf="messageType === 'image'" class="message-form">
-          <div class="form-group">
-            <label class="field-label">Image URL</label>
-            <input type="text" placeholder="https://example.com/image.jpg" [(ngModel)]="imageLink" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="field-label">Caption (optional)</label>
-            <input type="text" placeholder="Enter caption" [(ngModel)]="imageCaption" class="form-input">
-          </div>
-        </div>
-
-        <!-- Video Fields -->
-        <div *ngIf="messageType === 'video'" class="message-form">
-          <div class="form-group">
-            <label class="field-label">Video URL</label>
-            <input type="text" placeholder="https://example.com/video.mp4" [(ngModel)]="videoLink" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="field-label">Caption (optional)</label>
-            <input type="text" placeholder="Enter caption" [(ngModel)]="videoCaption" class="form-input">
-          </div>
-        </div>
-
-        <!-- Document Fields -->
-        <div *ngIf="messageType === 'document'" class="message-form">
-          <div class="form-group">
-            <label class="field-label">Document URL</label>
-            <input type="text" placeholder="https://example.com/file.pdf" [(ngModel)]="docLink" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="field-label">Filename (optional)</label>
-            <input type="text" placeholder="Document.pdf" [(ngModel)]="docFilename" class="form-input">
-          </div>
-        </div>
-
-        <!-- Template Fields -->
-        <div *ngIf="messageType === 'template'" class="message-form template-form">
-          <div class="form-group">
-            <label class="field-label">Select Template</label>
-            <select [(ngModel)]="selectedTemplateName" (change)="onTemplateChange()" class="form-select">
-              <option value="">Choose a template</option>
-              <option *ngFor="let name of templateNames" [value]="name">{{ name }}</option>
-            </select>
-          </div>
-
-          <div *ngIf="selectedTemplate" class="template-fields">
-            <!-- Header Variables -->
-            <div *ngIf="headerComponent?.format === 'TEXT' && templateHeaderVariables.length > 0" class="form-section">
-              <label class="section-label">Header Variables</label>
-              <div *ngFor="let v of templateHeaderVariables; let i = index; trackBy: trackByIndex" class="form-group">
-                <input type="text" [id]="'header-var-' + i" [attr.data-index]="i" [placeholder]="'Variable ' + (i + 1)"
-                  [value]="templateHeaderVariables[i]" (input)="templateHeaderVariables[i] = $any($event.target).value"
-                  class="form-input small">
-              </div>
+        <div class="message-type-panel" *ngIf="messageType !== 'text'">
+          <!-- Image Fields -->
+          <div *ngIf="messageType === 'image'" class="message-form">
+            <!-- ✅ File Upload Button -->
+            <div class="upload-section">
+              <button class="upload-btn" (click)="triggerFileInput()" [disabled]="isUploading">
+                📁 Choose Image File
+              </button>
+              <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)"
+                style="display: none;">
             </div>
 
-            <!-- Header Media -->
-            <div
-              *ngIf="headerComponent && headerComponent.format && ['IMAGE','VIDEO','DOCUMENT'].includes(headerComponent.format)"
-              class="form-section">
-              <label class="section-label">Header {{ headerFormat || 'Media' }}</label>
-              <div class="form-group">
-                <input type="text" placeholder="Media URL" [(ngModel)]="templateHeaderMedia" class="form-input">
+            <!-- ✅ Selected File Preview -->
+            <div *ngIf="selectedFile" class="selected-file-preview">
+              <img [src]="localPreviewUrl" alt="Preview" class="file-preview-img">
+              <div class="file-info">
+                <span class="file-name">{{ selectedFile.name }}</span>
+                <span class="file-size">{{ getFileSize() }}</span>
               </div>
+              <button class="remove-file-btn" (click)="removeSelectedFile()" [disabled]="isUploading">✕</button>
             </div>
 
-            <!-- Body Variables -->
-            <div *ngIf="templateBodyVariables.length > 0" class="form-section">
-              <label class="section-label">Body Variables</label>
-              <div *ngFor="let v of templateBodyVariables; let i = index; trackBy: trackByIndex" class="form-group">
-                <input type="text" [id]="'body-var-' + i" [attr.data-index]="i" [placeholder]="'Variable ' + (i + 1)"
-                  [value]="templateBodyVariables[i]" (input)="templateBodyVariables[i] = $any($event.target).value"
-                  class="form-input small">
+            <!-- ✅ Upload Progress -->
+            <div *ngIf="isUploading" class="upload-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="uploadProgress"></div>
               </div>
+              <span class="progress-text">Uploading... {{ uploadProgress }}%</span>
             </div>
 
-            <!-- Button Variables -->
-            <div *ngFor="let button of getDynamicButtons(); let i = index; trackBy: trackByButtonIndex"
-              class="form-section">
-              <div *ngIf="button.type === 'URL' && hasButtonVariables(button)" class="form-group">
-                <label class="section-label">URL Parameter for "{{ button.text }}"</label>
-                <input type="text" [id]="'button-url-' + i" placeholder="Parameter value"
-                  [value]="templateButtonValues[i]" (input)="templateButtonValues[i] = $any($event.target).value"
-                  class="form-input small">
-              </div>
+            <div class="divider-text">OR</div>
 
-              <div *ngIf="button.type === 'OTP' && button.otp_type === 'ONE_TAP'">
-                <label class="section-label">OTP Details for "{{ button.text }}"</label>
-                <div class="form-group">
-                  <input type="text" [id]="'otp-code-' + i" placeholder="OTP Code" [value]="templateButtonValues[i]"
-                    (input)="templateButtonValues[i] = $any($event.target).value" class="form-input small">
+            <div class="form-group">
+              <label class="field-label">Image URL</label>
+              <input type="text" placeholder="https://example.com/image.jpg" [(ngModel)]="imageLink" class="form-input"
+                [disabled]="!!selectedFile">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Caption (optional)</label>
+              <input type="text" placeholder="Enter caption" [(ngModel)]="imageCaption" class="form-input">
+            </div>
+          </div>
+
+          <!-- Video Fields -->
+          <div *ngIf="messageType === 'video'" class="message-form">
+            <!-- ✅ File Upload Button -->
+            <div class="upload-section">
+              <button class="upload-btn" (click)="triggerFileInput()" [disabled]="isUploading">
+                📁 Choose Video File
+              </button>
+              <input #fileInput type="file" accept="video/mp4,video/3gpp" (change)="onFileSelected($event)"
+                style="display: none;">
+            </div>
+
+            <!-- ✅ Selected File Preview -->
+            <div *ngIf="selectedFile" class="selected-file-preview">
+              <video [src]="localPreviewUrl" class="file-preview-video" controls></video>
+              <div class="file-info">
+                <span class="file-name">{{ selectedFile.name }}</span>
+                <span class="file-size">{{ getFileSize() }}</span>
+              </div>
+              <button class="remove-file-btn" (click)="removeSelectedFile()" [disabled]="isUploading">✕</button>
+            </div>
+
+            <!-- ✅ Upload Progress -->
+            <div *ngIf="isUploading" class="upload-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+              </div>
+              <span class="progress-text">Uploading... {{ uploadProgress }}%</span>
+            </div>
+
+            <div class="divider-text">OR</div>
+
+            <div class="form-group">
+              <label class="field-label">Video URL</label>
+              <input type="text" placeholder="https://example.com/video.mp4" [(ngModel)]="videoLink" class="form-input"
+                [disabled]="!!selectedFile">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Caption (optional)</label>
+              <input type="text" placeholder="Enter caption" [(ngModel)]="videoCaption" class="form-input">
+            </div>
+          </div>
+
+          <!-- Document Fields -->
+          <div *ngIf="messageType === 'document'" class="message-form">
+            <!-- ✅ File Upload Button -->
+            <div class="upload-section">
+              <button class="upload-btn" (click)="triggerFileInput()" [disabled]="isUploading">
+                📁 Choose Document
+              </button>
+              <input #fileInput type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                (change)="onFileSelected($event)" style="display: none;">
+            </div>
+
+            <!-- ✅ Selected File Preview -->
+            <div *ngIf="selectedFile" class="selected-file-preview document">
+              <div class="document-icon">📄</div>
+              <div class="file-info">
+                <span class="file-name">{{ selectedFile.name }}</span>
+                <span class="file-size">{{ getFileSize() }}</span>
+              </div>
+              <button class="remove-file-btn" (click)="removeSelectedFile()" [disabled]="isUploading">✕</button>
+            </div>
+
+            <!-- ✅ Upload Progress -->
+            <div *ngIf="isUploading" class="upload-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+              </div>
+              <span class="progress-text">Uploading... {{ uploadProgress }}%</span>
+            </div>
+
+            <div class="divider-text">OR</div>
+
+            <div class="form-group">
+              <label class="field-label">Document URL</label>
+              <input type="text" placeholder="https://example.com/file.pdf" [(ngModel)]="docLink" class="form-input"
+                [disabled]="!!selectedFile">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Filename (optional)</label>
+              <input type="text" placeholder="Document.pdf" [(ngModel)]="docFilename" class="form-input">
+            </div>
+          </div>
+
+          <!-- Template Fields -->
+          <div *ngIf="messageType === 'template'" class="message-form template-form">
+            <div class="form-group">
+              <label class="field-label">Select Template</label>
+              <select [(ngModel)]="selectedTemplateName" (change)="onTemplateChange()" class="form-select">
+                <option value="">Choose a template</option>
+                <option *ngFor="let name of templateNames" [value]="name">{{ name }}</option>
+              </select>
+            </div>
+
+            <div *ngIf="selectedTemplate" class="template-fields">
+              <!-- Header Variables -->
+              <div *ngIf="headerComponent?.format === 'TEXT' && templateHeaderVariables.length > 0"
+                class="form-section">
+                <label class="section-label">Header Variables</label>
+                <div *ngFor="let v of templateHeaderVariables; let i = index; trackBy: trackByIndex" class="form-group">
+                  <input type="text" [id]="'header-var-' + i" [attr.data-index]="i"
+                    [placeholder]="'Variable ' + (i + 1)" [value]="templateHeaderVariables[i]"
+                    (input)="templateHeaderVariables[i] = $any($event.target).value" class="form-input small">
                 </div>
+              </div>
+
+              <!-- Header Media -->
+              <div
+                *ngIf="headerComponent && headerComponent.format && ['IMAGE','VIDEO','DOCUMENT'].includes(headerComponent.format)"
+                class="form-section">
+                <label class="section-label">Header {{ headerFormat || 'Media' }}</label>
                 <div class="form-group">
-                  <input type="text" [id]="'package-' + i" placeholder="Package Name"
-                    [value]="oneTapParams[i]?.packageName"
-                    (input)="oneTapParams[i].packageName = $any($event.target).value" class="form-input small">
+                  <input type="text" placeholder="Media URL" [(ngModel)]="templateHeaderMedia" class="form-input">
                 </div>
-                <div class="form-group">
-                  <input type="text" [id]="'signature-' + i" placeholder="Signature Hash"
-                    [value]="oneTapParams[i]?.signatureHash"
-                    (input)="oneTapParams[i].signatureHash = $any($event.target).value" class="form-input small">
+              </div>
+
+              <!-- Body Variables -->
+              <div *ngIf="templateBodyVariables.length > 0" class="form-section">
+                <label class="section-label">Body Variables</label>
+                <div *ngFor="let v of templateBodyVariables; let i = index; trackBy: trackByIndex" class="form-group">
+                  <input type="text" [id]="'body-var-' + i" [attr.data-index]="i" [placeholder]="'Variable ' + (i + 1)"
+                    [value]="templateBodyVariables[i]" (input)="templateBodyVariables[i] = $any($event.target).value"
+                    class="form-input small">
+                </div>
+              </div>
+
+              <!-- Button Variables -->
+              <div *ngFor="let button of getDynamicButtons(); let i = index; trackBy: trackByButtonIndex"
+                class="form-section">
+                <div *ngIf="button.type === 'URL' && hasButtonVariables(button)" class="form-group">
+                  <label class="section-label">URL Parameter for "{{ button.text }}"</label>
+                  <input type="text" [id]="'button-url-' + i" placeholder="Parameter value"
+                    [value]="templateButtonValues[i]" (input)="templateButtonValues[i] = $any($event.target).value"
+                    class="form-input small">
+                </div>
+
+                <div *ngIf="button.type === 'OTP' && button.otp_type === 'ONE_TAP'">
+                  <label class="section-label">OTP Details for "{{ button.text }}"</label>
+                  <div class="form-group">
+                    <input type="text" [id]="'otp-code-' + i" placeholder="OTP Code" [value]="templateButtonValues[i]"
+                      (input)="templateButtonValues[i] = $any($event.target).value" class="form-input small">
+                  </div>
+                  <div class="form-group">
+                    <input type="text" [id]="'package-' + i" placeholder="Package Name"
+                      [value]="oneTapParams[i]?.packageName"
+                      (input)="oneTapParams[i].packageName = $any($event.target).value" class="form-input small">
+                  </div>
+                  <div class="form-group">
+                    <input type="text" [id]="'signature-' + i" placeholder="Signature Hash"
+                      [value]="oneTapParams[i]?.signatureHash"
+                      (input)="oneTapParams[i].signatureHash = $any($event.target).value" class="form-input small">
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       <!-- Input Area -->
@@ -258,14 +364,15 @@
         <input *ngIf="messageType === 'text'" type="text" placeholder="Type a message..." [(ngModel)]="newMessage"
           (keyup.enter)="sendMessage()" class="message-input">
 
-        <button class="send-btn" (click)="sendMessage()" [disabled]="messageType === 'text' && !newMessage.trim()">
+        <button class="send-btn" (click)="sendMessage()"
+          [disabled]="(messageType === 'text' && !newMessage.trim()) || isUploading">
           <span class="send-icon">➤</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Right Side: Preview Panel (same as before) -->
+  <!-- Right Side: Preview Panel -->
   <div class="preview-panel" [ngClass]="{'active': showPreview}">
     <div class="preview-header">
       <h3>📱 Message Preview</h3>
@@ -291,6 +398,7 @@
         </div>
 
         <div class="preview-message-bubble" [ngClass]="{'rtl': isPreviewRTL()}" *ngIf="hasPreviewContent()">
+          <!-- Template Preview -->
           <ng-container *ngIf="messageType === 'template' && selectedTemplate">
             <div *ngIf="hasHeaderVariables()" class="preview-message-header">
               {{ formatHeaderText() }}
@@ -323,29 +431,37 @@
             </div>
           </ng-container>
 
+          <!-- Text Preview -->
           <div *ngIf="messageType === 'text'" class="preview-message-body">
             <div *ngFor="let line of (newMessage || 'Your text will appear here...').split('\n')"
               class="preview-body-line">{{ line }}</div>
           </div>
 
+          <!-- Image Preview -->
           <div *ngIf="messageType === 'image'" class="preview-media">
-            <img *ngIf="imageLink" [src]="imageLink" alt="Image Preview"
+            <img *ngIf="getPreviewUrl()" [src]="getPreviewUrl()" alt="Image Preview"
               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <div class="preview-media-placeholder" style="display: none;">🖼️ Image Preview</div>
-            <div *ngIf="imageCaption" class="preview-caption">{{ imageCaption }}</div>
+            <div class="preview-media-placeholder" [style.display]="getPreviewUrl() ? 'none' : 'flex'">
+              🖼️ Image Preview
+            </div>
+            <div *ngIf="getPreviewCaption()" class="preview-caption">{{ getPreviewCaption() }}</div>
           </div>
 
+          <!-- Video Preview -->
           <div *ngIf="messageType === 'video'" class="preview-media">
-            <video *ngIf="videoLink" [src]="videoLink" controls
+            <video *ngIf="getPreviewUrl()" [src]="getPreviewUrl()" controls
               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
             </video>
-            <div class="preview-media-placeholder" style="display: none;">🎥 Video Preview</div>
-            <div *ngIf="videoCaption" class="preview-caption">{{ videoCaption }}</div>
+            <div class="preview-media-placeholder" [style.display]="getPreviewUrl() ? 'none' : 'flex'">
+              🎥 Video Preview
+            </div>
+            <div *ngIf="getPreviewCaption()" class="preview-caption">{{ getPreviewCaption() }}</div>
           </div>
 
+          <!-- Document Preview -->
           <div *ngIf="messageType === 'document'" class="preview-media">
             <div class="preview-document-icon">📄</div>
-            <span>{{ docFilename || 'Document.pdf' }}</span>
+            <span>{{ getPreviewCaption() || 'Document.pdf' }}</span>
           </div>
 
           <div class="preview-message-time">{{ getCurrentTime() }} ✓✓</div>
@@ -359,3 +475,4 @@
       </div>
     </div>
   </div>
+</div>

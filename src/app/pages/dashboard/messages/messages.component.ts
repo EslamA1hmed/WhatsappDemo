@@ -27,6 +27,10 @@ interface Message {
   mimeType?: string;
   caption?: string;
   filename?: string;
+  // ✅ أضف هذه الخصائص الثلاثة
+  thumbnail?: string;
+  width?: number;
+  height?: number;
   buttons?: Array<{ type: string; text: string; payload?: string; url?: string; phoneNumber?: string }>;
   hasMedia?: boolean;
   hasButtons?: boolean;

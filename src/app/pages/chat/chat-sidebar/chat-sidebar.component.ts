@@ -172,9 +172,7 @@ export class ChatSidebarComponent implements OnInit, OnDestroy {
   getMessagePreview(message: ChatMessage): string {
     if (message.type === 'text' && message.textBody) return this.truncateText(message.textBody);
     if (message.type === 'template' && message.templateBody) return this.truncateText(message.templateBody);
-    if (message.type === 'image') return message.caption ? this.truncateText(message.caption) : '📷 Photo';
-    if (message.type === 'video') return message.caption ? this.truncateText(message.caption) : '🎥 Video';
-    if (message.type === 'document') return '📄 Document';
+    if (message.type === 'media') return message.caption ? this.truncateText(message.caption) : '📷 Media';
     return 'Message';
   }
 
