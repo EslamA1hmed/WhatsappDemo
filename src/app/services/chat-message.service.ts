@@ -25,6 +25,11 @@ export interface ChatMessage {
   height?: number;
   caption?: string;
   filename?: string;
+  // ✅ خصائص جديدة لحالة المشغل
+  isPlaying?: boolean;       // هل الريكورد شغال حاليًا؟
+  currentTime?: number;    // الوقت الحالي بالثواني
+  duration?: number;       // مدة الريكورد الكلية بالثواني
+  progressPercent?: number;
   contextMessageId?: string;
   contextFrom?: string;
   buttons?: Array<{

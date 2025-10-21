@@ -21,7 +21,7 @@ export interface PreparedMediaResponse {
 export class MediaService {
   private apiUrl = 'http://localhost:8080/api/media';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   uploadAndPrepareMedia(file: File): Observable<PreparedMediaResponse> {
     const formData = new FormData();
@@ -70,7 +70,7 @@ export class MediaService {
   /**
    * Upload media file from local device
    */
-  uploadMedia(file: File, type: 'image' | 'video' | 'document'): Observable<UploadResponse> {
+  uploadMedia(file: File, type: 'image' | 'video' | 'document' | 'audio'): Observable<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
@@ -110,14 +110,16 @@ export class MediaService {
   /**
    * Validate file type
    */
-  validateFileType(file: File, type: 'image' | 'video' | 'document'): boolean {
+  validateFileType(file: File, type: 'image' | 'video' | 'document' | 'audio'): boolean {
     const validTypes: { [key: string]: string[] } = {
       image: ['image/jpeg', 'image/png', 'image/webp'],
       video: ['video/mp4', 'video/3gpp'],
-      document: ['application/pdf', 'application/vnd.ms-powerpoint', 'application/msword', 
-                 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+      document: ['application/pdf', 'application/vnd.ms-powerpoint', 'application/msword',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+
+      , audio: ['audio/aac', 'audio/mp4', 'audio/mpeg', 'audio/amr', 'audio/ogg', 'audio/opus']
     };
 
     return validTypes[type]?.includes(file.type) || false;

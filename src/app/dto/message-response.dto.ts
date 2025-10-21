@@ -15,8 +15,16 @@ export interface MessageResponseDTO {
   mediaId?: string;
   mimeType?: string;
   mediaUrl?: string;
+  mediaLoading?: boolean;
+  thumbnail?: string; // سيحتوي على Base64 string
+  width?: number;
+  height?: number;
   caption?: string;
   filename?: string;
+  isPlaying?: boolean;       // هل الريكورد شغال حاليًا؟
+  currentTime?: number;    // الوقت الحالي بالثواني
+  duration?: number;       // مدة الريكورد الكلية بالثواني
+  progressPercent?: number;
   contextMessageId?: string;
   contextFrom?: string;
   buttons?: ButtonDTO[];

@@ -21,6 +21,8 @@
     "@angular/platform-server": "^17.3.0",
     "@angular/router": "^17.3.0",
     "@angular/ssr": "^17.3.5",
+    "@ctrl/ngx-emoji-mart": "^9.3.0",
+    "@emoji-mart/data": "^1.2.1",
     "@stomp/stompjs": "^7.2.0",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",

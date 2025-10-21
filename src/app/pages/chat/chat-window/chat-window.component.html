@@ -70,6 +70,141 @@
                 <span>Loading video...</span>
               </div>
             </div>
+            <div class="message-media video-preview" *ngIf="message.type === 'video' && message.mediaId">
+              <div class="media-loading-placeholder document-style" *ngIf="!message.mediaUrl">
+                <div class="media-icon">🎥</div>
+                <div class="media-filename">{{ message.caption || message.filename || 'Video' }}</div>
+                <div class="media-spinner small"></div>
+              </div>
+              <video *ngIf="message.mediaUrl" [src]="message.mediaUrl" controls class="media-video loaded">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            <div class="message-media audio-player-container" *ngIf="message.type === 'audio' && message.mediaId"
+              (click)="$event.stopPropagation()">
+
+              <div class="audio-loading-ui" *ngIf="!message.mediaUrl">
+                <div class="audio-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path
+                      d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                </div>
+                <div class="audio-info">
+                  <div class="audio-waveform-placeholder">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                  </div>
+                  <div class="audio-duration-text">Loading audio...</div>
+                </div>
+                <div class="audio-spinner-small"></div>
+              </div>
+
+              <!-- ✅ المشغل المخصص (Custom Player) - بعد ما الـ audio يحمل -->
+              <div class="custom-audio-player" *ngIf="message.mediaUrl">
+                <!-- Hidden Audio Element -->
+                <audio #audioPlayer [src]="message.mediaUrl"
+                  (loadedmetadata)="onAudioLoadedMetadata(message.messageId, audioPlayer)"
+                  (timeupdate)="onAudioTimeUpdate(message.messageId, audioPlayer)"
+                  (ended)="onAudioEnded(message.messageId)" style="display: none;">
+                </audio>
+
+                <!-- 🎵 زر Play/Pause -->
+                <button class="audio-play-btn" [class.playing]="audioStates.get(message.messageId)?.isPlaying"
+                  (click)="toggleAudio(message.messageId, audioPlayer)"
+                  [disabled]="!audioStates.get(message.messageId)?.duration"
+                  [attr.aria-label]="audioStates.get(message.messageId)?.isPlaying ? 'Pause' : 'Play'">
+
+                  <!-- Play Icon -->
+                  <svg *ngIf="!audioStates.get(message.messageId)?.isPlaying" width="20" height="20" viewBox="0 0 24 24"
+                    fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+
+                  <!-- Pause Icon -->
+                  <svg *ngIf="audioStates.get(message.messageId)?.isPlaying" width="20" height="20" viewBox="0 0 24 24"
+                    fill="currentColor">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                  </svg>
+                </button>
+
+                <!-- 📊 منطقة الموجات والتقدم -->
+                <div class="audio-content">
+                  <!-- Waveform مع Progress Bar -->
+                  <div class="audio-progress-container" (click)="seekAudio(message.messageId, $event)" role="slider"
+                    [attr.aria-valuenow]="audioStates.get(message.messageId)?.progress || 0" aria-valuemin="0"
+                    aria-valuemax="100">
+
+                    <!-- الموجات الصوتية (30 عمود) -->
+                    <div class="audio-waveform">
+                      <div class="wave-bar"
+                        *ngFor="let _ of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]">
+                      </div>
+                    </div>
+
+                    <!-- شريط التقدم المتحرك -->
+                    <div class="audio-progress-overlay"
+                      [style.width.%]="audioStates.get(message.messageId)?.progress || 0">
+                    </div>
+                  </div>
+
+                  <!-- ⏱️ عرض الوقت -->
+                  <div class="audio-time">
+                    <span class="time-current">
+                      {{ formatAudioTime(audioStates.get(message.messageId)?.currentTime || 0) }}
+                    </span>
+                    <span class="time-separator">/</span>
+                    <span class="time-duration">
+                      {{ formatAudioTime(audioStates.get(message.messageId)?.duration || 0) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================================================ -->
+            <!-- ✅ منطق عرض المستندات (Documents) - نسخة مُحسَّنة -->
+            <!-- ================================================ -->
+            <div class="message-media document-preview" *ngIf="message.type === 'document' && message.mediaId">
+              <!-- حالة التحميل -->
+              <div class="media-loading-placeholder document-style" *ngIf="!message.mediaUrl">
+                <div class="media-icon">📄</div>
+                <!-- ✅ إضافة div هنا -->
+                <div class="document-info">
+                  <div class="media-filename">{{ message.filename || 'Document' }}</div>
+                  <div class="media-filesize">Loading...</div>
+                </div>
+                <div class="media-spinner small"></div>
+              </div>
+              <!-- حالة اكتمال التحميل -->
+              <div class="document-loaded" *ngIf="message.mediaUrl">
+                <div class="media-icon">📄</div>
+                <!-- ✅ إضافة div هنا -->
+                <div class="document-info">
+                  <div class="media-filename">{{ message.filename || 'Document' }}</div>
+                  <!-- ممكن نضيف حجم الملف هنا في المستقبل لو جبناه من الباك إند -->
+                  <div class="media-filesize">{{ message.mimeType || 'File' }}</div>
+                </div>
+                <a [href]="message.mediaUrl" target="_blank" [download]="message.filename || 'document'"
+                  class="download-button" aria-label="Download document">
+                  <!-- أيقونة التحميل -->
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </a>
+              </div>
+            </div>
             <!-- Text or Template Content -->
             <div class="message-text" *ngIf="message.type === 'text' && message.textBody"
               [class.rtl]="isRTL(message.textBody)">
@@ -328,6 +463,7 @@
 
       <!-- Input Area -->
       <div class="input-area">
+
         <button class="attach-btn" (click)="toggleMessageOptions()" title="Message Type"
           [class.active]="showMessageOptions">
           <span *ngIf="messageType === 'text'">📎</span>
@@ -336,38 +472,128 @@
           <span *ngIf="messageType === 'document'">📄</span>
           <span *ngIf="messageType === 'template'">📋</span>
         </button>
+      
+        <button class="emoji-btn" (click)="toggleEmojiPicker()" title="Select Emoji"
+          [class.active]="showEmojiPicker">
+          <span>😀</span>
+        </button>
+        
+        <div class="manual-emoji-picker" *ngIf="showEmojiPicker" (click)="$event.stopPropagation()">
+          
+          <div class="emoji-categories">
+            <button *ngFor="let category of emojiCategories"
+              class="category-btn"
+              [class.active]="category.category === selectedEmojiCategory.category"
+              (click)="selectEmojiCategory(category)"
+              [title]="category.category">
+              {{ category.icon }} </button>
+          </div>
 
-        <!-- Message Type Options Dropdown -->
+          <div class="emoji-list-container">
+            <div class="emoji-category-title">{{ selectedEmojiCategory.category | titlecase }}</div>
+            <div class="emoji-grid">
+              <span *ngFor="let emoji of selectedEmojiCategory.emojis" 
+                class="emoji-item"
+                (click)="addEmoji(emoji)">
+                {{ emoji }}
+              </span>
+            </div>
+          </div>
+        </div>
         <div class="message-options" *ngIf="showMessageOptions">
           <button class="option-btn" (click)="selectMessageType('text')">
-            <span class="option-icon">📝</span>
-            <span class="option-label">Text</span>
+            <span class="option-icon">📝</span> <span class="option-label">Text</span>
           </button>
           <button class="option-btn" (click)="selectMessageType('image')">
-            <span class="option-icon">🖼️</span>
-            <span class="option-label">Image</span>
+            <span class="option-icon">🖼️</span> <span class="option-label">Image</span>
           </button>
           <button class="option-btn" (click)="selectMessageType('video')">
-            <span class="option-icon">🎥</span>
-            <span class="option-label">Video</span>
+            <span class="option-icon">🎥</span> <span class="option-label">Video</span>
           </button>
           <button class="option-btn" (click)="selectMessageType('document')">
-            <span class="option-icon">📄</span>
-            <span class="option-label">Document</span>
+            <span class="option-icon">📄</span> <span class="option-label">Document</span>
           </button>
           <button class="option-btn" (click)="selectMessageType('template')">
-            <span class="option-icon">📋</span>
-            <span class="option-label">Template</span>
+            <span class="option-icon">📋</span> <span class="option-label">Template</span>
           </button>
         </div>
 
-        <input *ngIf="messageType === 'text'" type="text" placeholder="Type a message..." [(ngModel)]="newMessage"
-          (keyup.enter)="sendMessage()" class="message-input">
+        <!-- استبدل الـ audio-preview-input في الـ input-area -->
 
-        <button class="send-btn" (click)="sendMessage()"
-          [disabled]="(messageType === 'text' && !newMessage.trim()) || isUploading">
-          <span class="send-icon">➤</span>
-        </button>
+        <div class="input-area-center">
+          <!-- Text Input -->
+          <input *ngIf="messageType === 'text' && !isRecording && !recordedAudioUrl" type="text"
+            placeholder="Type a message..." [(ngModel)]="newMessage" (keyup.enter)="sendMessage()"
+            class="message-input">
+
+          <!-- Recording Indicator -->
+          <div *ngIf="isRecording" class="recording-indicator">
+            <div class="recording-animation">
+              <span class="record-dot"></span>
+              <span class="recording-text">Recording</span>
+            </div>
+            <span class="recording-time">{{ recordingTime | number:'1.0-0' }}s</span>
+          </div>
+
+          <!-- Audio Preview (Custom) -->
+          <div *ngIf="!isRecording && recordedAudioUrl" class="audio-preview-custom">
+            <audio #previewAudio [src]="recordedAudioUrl"
+              (loadedmetadata)="onAudioLoadedMetadata('preview', previewAudio)"
+              (timeupdate)="onAudioTimeUpdate('preview', previewAudio)" (ended)="onAudioEnded('preview')"
+              style="display: none;">
+            </audio>
+
+            <!-- Play/Pause Button -->
+            <button class="audio-preview-play-btn" [class.playing]="audioStates.get('preview')?.isPlaying"
+              (click)="toggleAudio('preview', previewAudio)" [disabled]="!audioStates.get('preview')?.duration">
+              <svg *ngIf="!audioStates.get('preview')?.isPlaying" width="20" height="20" viewBox="0 0 24 24"
+                fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              <svg *ngIf="audioStates.get('preview')?.isPlaying" width="20" height="20" viewBox="0 0 24 24"
+                fill="currentColor">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            </button>
+
+            <!-- Waveform Preview -->
+            <div class="audio-preview-content">
+              <div class="audio-preview-waveform">
+                <div class="wave-bar-small" *ngFor="let _ of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]">
+                </div>
+                <div class="audio-preview-progress" [style.width.%]="audioStates.get('preview')?.progress || 0">
+                </div>
+              </div>
+              <div class="audio-preview-time">
+                {{ formatAudioTime(audioStates.get('preview')?.currentTime || 0) }} /
+                {{ formatAudioTime(audioStates.get('preview')?.duration || 0) }}
+              </div>
+            </div>
+
+            <!-- Delete Button -->
+            <button class="audio-preview-delete" (click)="discardRecording()" title="Delete Recording">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-area-right">
+          <button
+            *ngIf="!isRecording && !recordedAudioUrl && messageType !== 'audio' && (messageType !== 'text' || (messageType === 'text' && newMessage.trim()))"
+            class="send-btn" (click)="sendMessage()"
+            [disabled]="(messageType !== 'text' && !hasContentForNonTextType()) || isUploading">
+            <span class="send-icon">➤</span>
+          </button>
+
+          <button *ngIf="!isRecording && !recordedAudioUrl && messageType === 'text' && !newMessage.trim()"
+            (click)="startRecording()" class="record-btn mic" title="Record Voice">🎙️</button>
+
+          <button *ngIf="isRecording" (click)="stopRecording()" class="send-btn stop-recording"
+            title="Stop and Send">✓</button> <button *ngIf="!isRecording && recordedAudioUrl" (click)="sendRecording()"
+            class="send-btn" title="Send Recording">➤</button>
+        </div>
+
       </div>
     </div>
   </div>

@@ -1004,9 +1004,12 @@
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.05);
     }
@@ -1147,7 +1150,9 @@ input:focus-visible,
 select:focus-visible {
     outline: 2px solid #00a884;
     outline-offset: 2px;
-}/* Main Layout */
+}
+
+/* Main Layout */
 .chat-layout {
     display: flex;
     height: 100%;
@@ -1381,6 +1386,7 @@ select:focus-visible {
         transform: translateY(0);
     }
 }
+
 /* Media Loading Placeholder */
 .media-loading-placeholder {
     width: 100%;
@@ -1412,9 +1418,12 @@ select:focus-visible {
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.7;
     }
@@ -1430,24 +1439,29 @@ select:focus-visible {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
 }
+
 /* -- STYLES FOR BLURRY IMAGE PLACEHOLDER -- */
 
 /* الحاوية التي تحافظ على نسبة أبعاد الصورة */
 .media-container {
     position: relative;
-    
+
     /* ✅ التعديل الرئيسي هنا */
-    width: 330px;     /* حاول أن تكون بعرض 330 بكسل */
-    max-width: 100%;  /* لكن لا تتجاوز عرض الفقاعة المتاح */
+    width: 330px;
+    /* حاول أن تكون بعرض 330 بكسل */
+    max-width: 100%;
+    /* لكن لا تتجاوز عرض الفقاعة المتاح */
 
     background-color: #e9edef;
     border-radius: 7.5px;
     overflow: hidden;
-    display: block; /* تأكد من أنها تأخذ مساحة كـ block */
+    display: block;
+    /* تأكد من أنها تأخذ مساحة كـ block */
 }
 
 /* باقي الأنماط تبقى كما هي بدون تغيير */
@@ -1480,6 +1494,1160 @@ select:focus-visible {
 }
 
 /* عندما تظهر الصورة الحقيقية، قم بإخفاء الـ placeholder */
-.media-full-image.loaded + .media-placeholder {
+.media-full-image.loaded+.media-placeholder {
     opacity: 0;
+}
+
+/* ================================================ */
+/* ✅ STYLES FOR VIDEO & DOCUMENT DISPLAY (IMPROVED) */
+/* ================================================ */
+
+/* --- Video Styles --- */
+.media-video.loaded {
+    display: block;
+    width: 100%;
+    max-width: 330px;
+    border-radius: 7.5px;
+    animation: fadeInMedia 0.4s ease;
+}
+
+/* --- Document Styles --- */
+.document-preview {
+    padding: 8px;
+    background: #f0f2f5;
+    border: 1px solid #e9edef;
+    border-radius: 8px;
+    /* max-width: 330px; */
+    /* <-- شيل دي أو قللها لو محددة */
+    width: 100%;
+    /* <-- خليها 100% عشان تاخد عرض المساحة المتاحة جوه الفقاعة */
+    box-sizing: border-box;
+    /* <-- مهم: عشان الـ padding ميخرجش بره الـ 100% */
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
+    display: block;
+    /* <-- تأكد إنها block element */
+}
+
+.sent .document-preview {
+    background: #e7ffdb;
+    /* لون أخف متماشي مع الرسائل المرسلة */
+}
+
+.document-loaded,
+.media-loading-placeholder.document-style {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+    /* <-- خليها 100% عشان تاخد عرض الـ .document-preview */
+    height: auto;
+    animation: none;
+    /* max-width: 330px; */
+    /* <-- شيل السطر ده لو موجود */
+}
+
+/* Icon Styling */
+.document-preview .media-icon {
+    font-size: 26px;
+    background-color: #78909c;
+    /* لون مميز للأيقونة */
+    color: white;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Text Styling */
+.document-info {
+    flex-grow: 1;
+    min-width: 0;
+    /* مهم عشان الـ text-overflow يشتغل صح */
+}
+
+.document-preview .media-filename {
+    font-weight: 500;
+    font-size: 15px;
+    color: #111b21;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.document-preview .media-filesize {
+    font-size: 13px;
+    color: #667781;
+    margin-top: 2px;
+}
+
+/* Download Button & Spinner Styling */
+.download-button {
+    background-color: transparent;
+    color: #54656f;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+}
+
+.download-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.download-button svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.5;
+}
+
+.media-loading-placeholder.document-style .media-spinner.small {
+    width: 24px;
+    height: 24px;
+    border-width: 2.5px;
+    margin: 0;
+    flex-shrink: 0;
+    margin-right: 8px;
+    /* عشان يبقى مكان الزرار */
+}
+
+/* Hide old loading text */
+.media-loading-placeholder.document-style span {
+    display: none;
+}
+
+/* ================================= */
+/* ✅ STYLES FOR INPUT AREA (REVISED) */
+/* ================================= */
+
+.input-area {
+    display: flex;
+    align-items: flex-end;
+    /* Align items to the bottom */
+    gap: 8px;
+    padding: 10px 12px;
+    /* Reduced padding slightly */
+    background: #f0f2f5;
+    min-height: 62px;
+    position: relative;
+    border-top: 1px solid #e9edef;
+    /* Add separator line */
+}
+
+/* Attachment Button */
+.attach-btn {
+    flex-shrink: 0;
+    margin-bottom: 6px;
+    /* Align with input/buttons */
+    /* (Your existing styles for attach-btn) */
+    background: none;
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    color: #54656f;
+    position: relative;
+}
+
+.attach-btn:hover,
+.attach-btn.active {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Message Options */
+.message-options {
+    /* (Your existing styles) */
+    position: absolute;
+    bottom: 65px;
+    left: 10px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 180px;
+    animation: slideUp 0.2s ease;
+    z-index: 10;
+}
+
+/* ... (option-btn styles) ... */
+
+/* Center Area (Input / Recording / Preview) */
+.input-area-center {
+    flex-grow: 1;
+    /* Takes up available space */
+    display: flex;
+    align-items: center;
+    /* Center vertically */
+    min-width: 0;
+    /* Important for input shrinking */
+    background-color: #ffffff;
+    /* White background like input */
+    border-radius: 21px;
+    /* Rounded corners */
+    padding: 0 12px;
+    /* Padding inside the white area */
+    min-height: 42px;
+    /* Match button height */
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+    /* Subtle shadow */
+}
+
+/* Text Input */
+.message-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    /* Transparent background */
+    padding: 9px 0;
+    /* Vertical padding only */
+    font-size: 15px;
+    line-height: 20px;
+    color: #111b21;
+    resize: none;
+    max-height: 100px;
+    /* Limit height for multi-line */
+    overflow-y: auto;
+    /* Allow scrolling for multi-line */
+}
+
+.message-input:focus {
+    outline: none;
+}
+
+.message-input::placeholder {
+    color: #8696a0;
+}
+
+/* Recording Indicator */
+.recording-indicator {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Space out elements */
+    font-size: 14px;
+    color: #54656f;
+    /* Less aggressive color */
+    font-weight: 500;
+}
+
+.record-dot {
+    color: #ef5350;
+    font-size: 10px;
+    margin-right: 5px;
+    animation: pulse-dot 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.4);
+    }
+}
+
+.discard-btn.recording {
+    /* Style for cancel button during recording */
+    color: #ef5350;
+    font-size: 20px;
+    padding: 5px;
+    margin-left: auto;
+}
+
+
+/* Audio Preview Input */
+.audio-preview-input {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    /* Use parent background */
+    padding: 0;
+    /* Remove padding */
+    border-radius: 0;
+    /* Remove radius */
+}
+
+.audio-preview-input audio {
+    flex-grow: 1;
+    height: 38px;
+    /* Slightly smaller height */
+    min-width: 100px;
+}
+
+/* Controls list might need browser prefixes or might not work everywhere */
+audio::-webkit-media-controls-panel {
+    background-color: transparent;
+}
+
+audio::-webkit-media-controls-play-button {
+    /* Add specific styling if needed */
+}
+
+.audio-preview-input .discard-btn {
+    flex-shrink: 0;
+    /* (Your existing discard styles) */
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    color: #ef5350;
+    transition: background 0.2s;
+}
+
+.discard-btn:hover {
+    background: rgba(239, 83, 80, 0.1);
+}
+
+/* Right Area (Buttons) */
+.input-area-right {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    /* Align perfectly with bottom */
+}
+
+/* General Button Styles (Send/Mic/Stop) */
+.send-btn,
+.record-btn.mic,
+.send-btn.stop-recording {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Send Button */
+.send-btn {
+    background: #00a884;
+    /* WhatsApp Green */
+    color: white;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: #007f60;
+}
+
+.send-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.send-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #00a884;
+}
+
+.send-icon {
+    font-size: 20px;
+}
+
+/* Mic Button */
+.record-btn.mic {
+    background: #00a884;
+    /* Same as send */
+    color: white;
+    font-size: 20px;
+}
+
+.record-btn.mic:hover {
+    background: #007f60;
+}
+
+/* Stop Recording Button (Checkmark) */
+.send-btn.stop-recording {
+    background: #ef5350;
+    /* Red color */
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.send-btn.stop-recording:hover {
+    background: #d32f2f;
+}
+
+/* ================================================ */
+/* ✅ AUDIO PREVIEW IN INPUT AREA */
+/* ================================================ */
+
+/* Recording Indicator */
+.recording-indicator {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.recording-animation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.record-dot {
+  width: 12px;
+  height: 12px;
+  background: #ef5350;
+  border-radius: 50%;
+  animation: pulse-record 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+}
+
+.recording-text {
+  font-size: 14px;
+  color: #ef5350;
+  font-weight: 600;
+}
+
+.recording-time {
+  font-size: 13px;
+  color: #667781;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Audio Preview Custom */
+.audio-preview-custom {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.audio-preview-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #00a884;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.audio-preview-play-btn:hover:not(:disabled) {
+  background: #00916f;
+  transform: scale(1.05);
+}
+
+.audio-preview-play-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.audio-preview-play-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-preview-play-btn.playing {
+  background: #ef5350;
+}
+
+.audio-preview-play-btn.playing:hover:not(:disabled) {
+  background: #e53935;
+}
+
+.audio-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.audio-preview-waveform {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.wave-bar-small {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  transition: background 0.2s;
+  min-width: 2px;
+}
+
+/* Random heights for preview waveform */
+.wave-bar-small:nth-child(1) { height: 6px; }
+.wave-bar-small:nth-child(2) { height: 12px; }
+.wave-bar-small:nth-child(3) { height: 9px; }
+.wave-bar-small:nth-child(4) { height: 15px; }
+.wave-bar-small:nth-child(5) { height: 7px; }
+.wave-bar-small:nth-child(6) { height: 14px; }
+.wave-bar-small:nth-child(7) { height: 10px; }
+.wave-bar-small:nth-child(8) { height: 16px; }
+.wave-bar-small:nth-child(9) { height: 8px; }
+.wave-bar-small:nth-child(10) { height: 13px; }
+.wave-bar-small:nth-child(11) { height: 11px; }
+.wave-bar-small:nth-child(12) { height: 18px; }
+.wave-bar-small:nth-child(13) { height: 7px; }
+.wave-bar-small:nth-child(14) { height: 14px; }
+.wave-bar-small:nth-child(15) { height: 9px; }
+.wave-bar-small:nth-child(16) { height: 16px; }
+.wave-bar-small:nth-child(17) { height: 10px; }
+.wave-bar-small:nth-child(18) { height: 12px; }
+.wave-bar-small:nth-child(19) { height: 8px; }
+.wave-bar-small:nth-child(20) { height: 15px; }
+
+.audio-preview-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0, 168, 132, 0.3), rgba(0, 168, 132, 0.5));
+  border-radius: 4px;
+  pointer-events: none;
+  transition: width 0.1s linear;
+}
+
+.audio-preview-time {
+  font-size: 11px;
+  color: #667781;
+  font-weight: 500;
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-preview-delete {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #ef5350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.audio-preview-delete:hover {
+  background: rgba(239, 83, 80, 0.1);
+  transform: scale(1.1);
+}
+
+.audio-preview-delete:active {
+  transform: scale(0.95);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .audio-preview-custom {
+    padding: 0 4px;
+    gap: 6px;
+  }
+
+  .audio-preview-play-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .audio-preview-play-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .audio-preview-delete {
+    width: 28px;
+    height: 28px;
+  }
+
+  .audio-preview-delete svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+/* ================================================ */
+/* ✅ CUSTOM AUDIO PLAYER في الشات (للرسائل المرسلة والمستقبلة) */
+/* ================================================ */
+
+/* 🎵 الحاوية الرئيسية للـ Audio Player */
+.audio-player-container {
+  padding: 10px 12px;
+  background: transparent;
+  border-radius: 7.5px;
+  min-width: 280px;
+  max-width: 350px;
+  width: 100%;
+}
+
+/* ================================================ */
+/* ⏳ حالة التحميل (Loading State) */
+/* ================================================ */
+.audio-loading-ui {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.audio-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 168, 132, 0.12);
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: #00a884;
+}
+
+.sent .audio-icon {
+  background: rgba(7, 94, 84, 0.15);
+  color: #075e54;
+}
+
+.audio-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.audio-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* موجات التحميل المتحركة */
+.audio-waveform-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+  padding: 0 4px;
+}
+
+.audio-waveform-placeholder .wave-bar {
+  width: 4px;
+  background: rgba(0, 168, 132, 0.35);
+  border-radius: 2px;
+  animation: pulse-wave 1.2s ease-in-out infinite;
+}
+
+.sent .audio-waveform-placeholder .wave-bar {
+  background: rgba(7, 94, 84, 0.3);
+}
+
+/* ارتفاعات مختلفة للموجات + تأخير الـ animation */
+.audio-waveform-placeholder .wave-bar:nth-child(1) { height: 12px; animation-delay: 0s; }
+.audio-waveform-placeholder .wave-bar:nth-child(2) { height: 22px; animation-delay: 0.1s; }
+.audio-waveform-placeholder .wave-bar:nth-child(3) { height: 16px; animation-delay: 0.2s; }
+.audio-waveform-placeholder .wave-bar:nth-child(4) { height: 26px; animation-delay: 0.3s; }
+.audio-waveform-placeholder .wave-bar:nth-child(5) { height: 14px; animation-delay: 0.4s; }
+.audio-waveform-placeholder .wave-bar:nth-child(6) { height: 20px; animation-delay: 0.5s; }
+.audio-waveform-placeholder .wave-bar:nth-child(7) { height: 18px; animation-delay: 0.6s; }
+.audio-waveform-placeholder .wave-bar:nth-child(8) { height: 24px; animation-delay: 0.7s; }
+
+@keyframes pulse-wave {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.8); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+.audio-duration-text {
+  font-size: 12px;
+  color: #667781;
+  font-weight: 500;
+  padding: 0 4px;
+}
+
+.sent .audio-duration-text {
+  color: #667781;
+}
+
+/* Spinner صغير */
+.audio-spinner-small {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(0, 0, 0, 0.08);
+  border-top: 2.5px solid #00a884;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.sent .audio-spinner-small {
+  border-top-color: #075e54;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ================================================ */
+/* ✅ المشغل المخصص (Custom Audio Player) */
+/* ================================================ */
+.custom-audio-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+/* 🎵 زر Play/Pause */
+.audio-play-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #00a884, #009973);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 168, 132, 0.25);
+  position: relative;
+}
+
+/* للرسائل المرسلة */
+.sent .audio-play-btn {
+  background: linear-gradient(135deg, #075e54, #054a42);
+  box-shadow: 0 2px 6px rgba(7, 94, 84, 0.25);
+}
+
+.audio-play-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00916f, #007d5c);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.35);
+}
+
+.sent .audio-play-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #054a42, #043833);
+  box-shadow: 0 4px 12px rgba(7, 94, 84, 0.35);
+}
+
+.audio-play-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.audio-play-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.audio-play-btn svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+}
+
+/* حالة الـ Playing (أحمر) */
+.audio-play-btn.playing {
+  background: linear-gradient(135deg, #ef5350, #e53935);
+  box-shadow: 0 2px 6px rgba(239, 83, 80, 0.25);
+}
+
+.sent .audio-play-btn.playing {
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+  box-shadow: 0 2px 6px rgba(211, 47, 47, 0.25);
+}
+
+.audio-play-btn.playing:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e53935, #d32f2f);
+  box-shadow: 0 4px 12px rgba(239, 83, 80, 0.35);
+}
+
+.sent .audio-play-btn.playing:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c62828, #b71c1c);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.35);
+}
+
+/* تأثير النبض أثناء التشغيل */
+@keyframes audio-playing-pulse {
+  0%, 100% { 
+    box-shadow: 0 2px 6px rgba(239, 83, 80, 0.25);
+  }
+  50% { 
+    box-shadow: 0 4px 16px rgba(239, 83, 80, 0.45);
+  }
+}
+
+.audio-play-btn.playing {
+  animation: audio-playing-pulse 2s ease-in-out infinite;
+}
+
+/* ================================================ */
+/* 📊 منطقة المحتوى (الموجات + الوقت) */
+/* ================================================ */
+.audio-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* حاوية شريط التقدم */
+.audio-progress-container {
+  position: relative;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 0 6px;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.audio-progress-container:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.sent .audio-progress-container:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* الموجات الصوتية (Waveform) */
+.audio-waveform {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 1;
+}
+
+.audio-waveform .wave-bar {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  min-width: 2px;
+  max-width: 4px;
+}
+
+.sent .audio-waveform .wave-bar {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ارتفاعات عشوائية للموجات (30 عمود) */
+.audio-waveform .wave-bar:nth-child(1) { height: 10px; }
+.audio-waveform .wave-bar:nth-child(2) { height: 18px; }
+.audio-waveform .wave-bar:nth-child(3) { height: 14px; }
+.audio-waveform .wave-bar:nth-child(4) { height: 24px; }
+.audio-waveform .wave-bar:nth-child(5) { height: 12px; }
+.audio-waveform .wave-bar:nth-child(6) { height: 20px; }
+.audio-waveform .wave-bar:nth-child(7) { height: 16px; }
+.audio-waveform .wave-bar:nth-child(8) { height: 26px; }
+.audio-waveform .wave-bar:nth-child(9) { height: 11px; }
+.audio-waveform .wave-bar:nth-child(10) { height: 22px; }
+.audio-waveform .wave-bar:nth-child(11) { height: 15px; }
+.audio-waveform .wave-bar:nth-child(12) { height: 28px; }
+.audio-waveform .wave-bar:nth-child(13) { height: 13px; }
+.audio-waveform .wave-bar:nth-child(14) { height: 19px; }
+.audio-waveform .wave-bar:nth-child(15) { height: 17px; }
+.audio-waveform .wave-bar:nth-child(16) { height: 25px; }
+.audio-waveform .wave-bar:nth-child(17) { height: 12px; }
+.audio-waveform .wave-bar:nth-child(18) { height: 21px; }
+.audio-waveform .wave-bar:nth-child(19) { height: 14px; }
+.audio-waveform .wave-bar:nth-child(20) { height: 23px; }
+.audio-waveform .wave-bar:nth-child(21) { height: 16px; }
+.audio-waveform .wave-bar:nth-child(22) { height: 20px; }
+.audio-waveform .wave-bar:nth-child(23) { height: 13px; }
+.audio-waveform .wave-bar:nth-child(24) { height: 22px; }
+.audio-waveform .wave-bar:nth-child(25) { height: 15px; }
+.audio-waveform .wave-bar:nth-child(26) { height: 27px; }
+.audio-waveform .wave-bar:nth-child(27) { height: 14px; }
+.audio-waveform .wave-bar:nth-child(28) { height: 19px; }
+.audio-waveform .wave-bar:nth-child(29) { height: 17px; }
+.audio-waveform .wave-bar:nth-child(30) { height: 24px; }
+
+/* شريط التقدم (Overlay) */
+.audio-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0, 168, 132, 0.25), rgba(0, 168, 132, 0.45));
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  transition: width 0.1s linear;
+}
+
+.sent .audio-progress-overlay {
+  background: linear-gradient(90deg, rgba(7, 94, 84, 0.25), rgba(7, 94, 84, 0.45));
+}
+
+/* ⏱️ عرض الوقت */
+.audio-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 6px;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.time-current {
+  color: #00a884;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.sent .time-current {
+  color: #075e54;
+}
+
+.time-separator {
+  color: #8696a0;
+  font-weight: 400;
+  margin: 0 1px;
+}
+
+.time-duration {
+  color: #667781;
+  font-weight: 500;
+}
+
+/* ================================================ */
+/* 📱 Responsive Design */
+/* ================================================ */
+@media (max-width: 768px) {
+  .audio-player-container {
+    min-width: 240px;
+    max-width: 300px;
+    padding: 8px 10px;
+  }
+
+  .audio-play-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .audio-play-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .audio-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .audio-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .custom-audio-player {
+    gap: 10px;
+  }
+
+  .audio-progress-container {
+    height: 32px;
+  }
+
+  .audio-waveform {
+    height: 32px;
+    gap: 1.5px;
+  }
+
+  .audio-time {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .audio-player-container {
+    min-width: 200px;
+    max-width: 260px;
+  }
+
+  .audio-play-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .audio-play-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+/* ================================================ */
+/* ✅ STYLES FOR MANUAL EMOJI PICKER (NEW) */
+/* ================================================ */
+
+/* (1) الحاوية الرئيسية للمنتقي */
+.manual-emoji-picker {
+  position: absolute;
+  bottom: 70px; /* فوق شريط الإدخال */
+  left: 16px;
+  z-index: 10;
+  width: 350px;
+  height: 400px; /* ارتفاع ثابت لإظهار السكرول */
+  background: #ffffff;
+  border: 1px solid #e9edef;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.2s ease; /* نفس حركة الفتح */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* لإخفاء أي فيضان */
+}
+
+/* (2) شريط الأقسام (Tabs) */
+.emoji-categories {
+  display: flex;
+  flex-wrap: nowrap; /* منع نزول الأزرار لسطر جديد */
+  overflow-x: auto; /* سكرول أفقي للأقسام */
+  overflow-y: hidden;
+  padding: 8px;
+  background: #f0f2f5;
+  border-bottom: 1px solid #e9edef;
+  scrollbar-width: thin; /* Firefox */
+}
+/* ستايل السكرول الأفقي للـ tabs */
+.emoji-categories::-webkit-scrollbar {
+  height: 4px;
+  background: #f0f2f5;
+}
+.emoji-categories::-webkit-scrollbar-thumb {
+  background: #d1d7db;
+  border-radius: 2px;
+}
+
+.category-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0; /* منع الأزرار من الانكماش */
+}
+.category-btn:hover {
+  background: #e0e4e8;
+}
+.category-btn.active {
+  background: #d1d7db;
+}
+
+/* (3) حاوية قائمة الإيموجيز (Scrollable) */
+.emoji-list-container {
+  flex: 1; /* تأخذ باقي المساحة المتاحة */
+  overflow-y: auto; /* سكرول رأسي */
+  padding: 8px 12px;
+  scrollbar-width: thin;
+}
+
+.emoji-category-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #54656f;
+  padding: 4px 0 10px 4px;
+  text-transform: capitalize;
+  position: sticky; /* تثبيت العنوان */
+  top: -8px; /* لتغطية الـ padding */
+  background: #ffffff;
+  padding-top: 8px; /* لإعادة الـ padding */
+}
+
+/* (4) شبكة الإيموجيز */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+  gap: 6px;
+}
+
+.emoji-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  transition: background 0.2s;
+}
+.emoji-item:hover {
+  background: #f0f2f5;
+}
+
+/* (5) ستايل زر الإيموجي (مشابه لزر المرفقات) */
+.emoji-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    color: #54656f;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+    position: relative;
+    line-height: 1;
+}
+
+.emoji-btn:hover,
+.emoji-btn.active {
+    background: rgba(0, 0, 0, 0.05);
 }
